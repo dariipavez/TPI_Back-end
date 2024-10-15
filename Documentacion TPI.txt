@@ -1,0 +1,6 @@
+Este es el documento principal del TPI, donde informaremos los avances de cada uno, y responderemos a las preguntas de Taller de Ingenieria,
+Acerca de los avances del proyecto, su finalidad y demás.
+Los integrantes del grupo son Maximiliano Pou, Maximiliano Arnez, Tiago Mansilla y Dariel Pavez
+Trabajaremos acerca de una página de ropa, utilizada por nosotros para vender ropa.
+Esta página está dividida en dos secciones, una de ropa deportiva y una de ropa urbana.
+Contará con perfiles de administrador y perfiles de usuario.
