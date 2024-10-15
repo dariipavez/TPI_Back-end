@@ -4,3 +4,7 @@ Los integrantes del grupo son Maximiliano Pou, Maximiliano Arnez, Tiago Mansilla
 Trabajaremos acerca de una página de ropa, utilizada por nosotros para vender ropa.
 Esta página está dividida en dos secciones, una de ropa deportiva y una de ropa urbana.
 Contará con perfiles de administrador y perfiles de usuario.
+
+Roles:
+Dariel y Maxi Pou se van a encargar de la base de datos, las tablas, el crud, etc
+maxi arnez y tiago se van a encargar de hacer las pantallas, el front-end. Con sus componentes
