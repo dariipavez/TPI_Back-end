@@ -8,3 +8,13 @@ Contará con perfiles de administrador y perfiles de usuario.
 Roles:
 Dariel y Maxi Pou se van a encargar de la base de datos, las tablas, el crud, etc
 maxi arnez y tiago se van a encargar de hacer las pantallas, el front-end. Con sus componentes
+
+Etapa 1:
+Comenzamos este proyecto decidiendo quienes iban a ser los integrantes del grupo. Habiendo decidido que participariamos:
+*Maximiliano Pou
+*Maximiliano Arnez
+*Tiago Mansilla
+*Dariel Pavez
+Teniendo decidido los integrantes del grupo. Comenzamos a pensar la idea que desarrollariamos. Tomando cómo inspiración Umbro, y nuestros emprendimientos
+decidimos hacer una tienda de ropa.
+Con esto, comenzamos con la etapa de diseño. Inspirandonos mucho en páginas cómo Umbro o Ripcurl.
