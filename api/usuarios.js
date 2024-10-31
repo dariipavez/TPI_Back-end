@@ -48,17 +48,17 @@ router.post('/',function(req,res,next){
     })
     .catch(error => {
         console.error("Error al registrar usuario:", error);
-        res.status(500).json({ status: 'error', message: error.toString() });
+        res.status(500).json({ status: 'error', error: error.toString() });
     });
      
 })
 
     
-/*router.post("/login",function(req,res,next){
+router.post("/login",function(req,res,next){
     const {nombre_usuario,contraseña}=req.body;
 
 
-    const sql='SELECT id,contraseña FROM usuarios WHERE nombre_usuario= ?'
+    const sql='SELECT id,nombre_usuario,contraseña FROM usuarios WHERE nombre_usuario= ?'
     conexion.query(sql,[nombre_usuario], function(error,result){
         if(error){
             console.error(error);
@@ -81,9 +81,47 @@ router.post('/',function(req,res,next){
         
     })
 })
-*/
 
+router.put('/', function(req, res) {
+    const { id } = req.query;
+    const campos = req.body;
 
+    if (!id) {
+        return res.status(400).json({ error: 'ID del usuario es requerido' });
+    }
+
+    let sql = 'UPDATE usuarios SET ';
+    const valores = [];
+
+    for (let campo in campos) {
+        sql += `${campo} = ?, `;
+        valores.push(campos[campo]);
+    }
+
+    sql = sql.slice(0, -2) + ' WHERE id = ?';
+    valores.push(id);
+    conexion.query(sql, valores, function(error) {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ error: error.message });
+        }
+        res.json({ status: "ok", Mensaje: "Usuario actualizado correctamente" });
+    });
+});
+
+router.delete('/', function(req, res, next){
+    const {id}=req.query;
+    const sql="DELETE FROM usuarios WHERE id=?"
+    conexion.query(sql,[id],function(error){
+        if(error){
+            console.error(error);
+            return res.status(500).send("ocurrió un error");
+        }
+        res.json({
+            status:"ok"
+        });
+    });
+});
 
 
 //obtener de la db la contraseña del usuario(si es q existe)
