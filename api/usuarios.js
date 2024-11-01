@@ -87,19 +87,23 @@ router.put('/', function(req, res) {
     const campos = req.body;
 
     if (!id) {
-        return res.status(400).json({ error: 'ID del usuario es requerido' });
+        return res.status(400).json({ error: 'Se necesita el id del usuario' });
     }
 
     let sql = 'UPDATE usuarios SET ';
     const valores = [];
 
     for (let campo in campos) {
+        if (campo === 'contraseña') {
+            campos[campo] = hashPass(campos[campo]);
+        }
         sql += `${campo} = ?, `;
         valores.push(campos[campo]);
     }
 
     sql = sql.slice(0, -2) + ' WHERE id = ?';
     valores.push(id);
+
     conexion.query(sql, valores, function(error) {
         if (error) {
             console.error(error);
@@ -108,6 +112,7 @@ router.put('/', function(req, res) {
         res.json({ status: "ok", Mensaje: "Usuario actualizado correctamente" });
     });
 });
+
 
 router.delete('/', function(req, res, next){
     const {id}=req.query;

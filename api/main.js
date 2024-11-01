@@ -8,7 +8,6 @@ const TOKEN_SECRET = '46087388'
 const usuariosRouter=require('./usuarios');
 const productosRouter=require('./productos')
 const marcaRouter=require('./marca')
-const tipo_productoRouter=require('./tipo_producto')
 const categoriaRouter=require('./categoria')
 
 //redirigir a los recursos segun la ruta
@@ -38,16 +37,7 @@ router.use('/marca', function(req,res,next){
     }
 })
 
-router.use('/tipo_producto', function(req,res,next){
-    const token=req.headers.authorization;
-    const verificacion= verificarToken(token, TOKEN_SECRET);
-    if(verificacion?.data!==undefined){
-        next()
-    }else{
-        console.error(verificacion);
-        res.status(403).json({status:'error',error:verificacion});
-    }
-})
+
 
 router.use('/categoria', function(req,res,next){
     const token=req.headers.authorization;
@@ -61,7 +51,6 @@ router.use('/categoria', function(req,res,next){
 })
 router.use('/productos', productosRouter);
 router.use('/marca', marcaRouter);
-router.use('/tipo_producto', tipo_productoRouter)
 router.use('/categoria',categoriaRouter)
 
 
