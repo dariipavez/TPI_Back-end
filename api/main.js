@@ -9,6 +9,7 @@ const usuariosRouter=require('./usuarios');
 const productosRouter=require('./productos')
 const marcaRouter=require('./marca')
 const categoriaRouter=require('./categoria')
+const envioRouter=require('./envio')
 
 //redirigir a los recursos segun la ruta
 router.use('/usuarios', usuariosRouter)
@@ -49,9 +50,23 @@ router.use('/categoria', function(req,res,next){
         res.status(403).json({status:'error',error:verificacion});
     }
 })
+
+router.use('/envio', function(req,res,next){
+    const token=req.headers.authorization;
+    const verificacion= verificarToken(token, TOKEN_SECRET);
+    if(verificacion?.data!==undefined){
+        next()
+    }else{
+        console.error(verificacion);
+        res.status(403).json({status:'error',error:verificacion});
+    }
+})
+
+
+
 router.use('/productos', productosRouter);
 router.use('/marca', marcaRouter);
 router.use('/categoria',categoriaRouter)
-
+router.use('/envio', envioRouter)
 
 module.exports=router;
