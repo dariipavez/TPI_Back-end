@@ -9,8 +9,6 @@ const port = 3000;
 app.use(express.json())
 app.get('/',function(req,res,next){
         res.send('App Personas');
-
-
 })
 
 app.use('/api', apiRouter)

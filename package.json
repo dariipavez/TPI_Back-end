@@ -7,7 +7,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
-  "author": "Dariel Pavez",
+  "author": "Maximiliano Pou",
   "license": "ISC",
   "dependencies": {
     "@damianegreco/hashpass": "^2.0.0",
