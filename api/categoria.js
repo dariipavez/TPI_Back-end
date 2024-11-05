@@ -4,23 +4,18 @@ const {conexion}=require('../db/conexion')
 
 
 function actualizarCategoria(id, campos, res) {
-    let sql = 'UPDATE categoria SET ';
-    const valores = [];
-
-    for (let campo in campos) {
-        sql += `${campo} = ?, `;
-        valores.push(campos[campo]);
-    }
-
-    sql = sql.slice(0, -2) + ' WHERE id = ?';
-    valores.push(id);
-
-    conexion.query(sql, valores, function(error) {
+    const sql_actualizar_categoria = 'UPDATE categoria SET ? WHERE id = ?';
+    conexion.query(sql_actualizar_categoria, [campos, id], function(error, result) {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: error.message });
+            return res.status(500).json({ error: 'Error al actualizar la categoria' });
         }
-        res.json({ status: "ok", mensaje: "Categoría actualizada correctamente" });
+
+        if (result.filasAfectadas === 0) {
+            return res.status(404).json({ error: 'No se encontró la categoria para actualizar' });
+        }
+
+        res.json({ status: 'ok', Mensaje: 'Categoria actualizada correctamente' });
     });
 }
 
@@ -113,9 +108,9 @@ router.put('/', function(req, res) {
             return res.status(404).json({ error: 'Categoría no encontrada' });
         }
 
-        if (campos.id_tipo_producto) {
-            const sql_verificar_producto = 'SELECT * FROM tipo_producto WHERE id = ?';
-            conexion.query(sql_verificar_producto, [campos.id_tipo_producto], function(error, productoResult) {
+        if (campos.nombre_tipo_producto) {
+            const sql_obtener_tipo_producto_id = 'SELECT id FROM tipo_producto WHERE nombre = ?';
+            conexion.query(sql_obtener_tipo_producto_id, [campos.nombre_tipo_producto], function(error, productoResult) {
                 if (error) {
                     console.error(error);
                     return res.status(500).json({ error: 'Error al verificar el tipo de producto' });
@@ -124,6 +119,8 @@ router.put('/', function(req, res) {
                 if (productoResult.length === 0) {
                     return res.status(404).json({ error: 'Tipo de producto no encontrado' });
                 }
+                campos.id_tipo_producto = productoResult[0].id;
+                delete campos.nombre_tipo_producto;
 
                 actualizarCategoria(id, campos, res);
             });
@@ -132,7 +129,6 @@ router.put('/', function(req, res) {
         }
     });
 });
-
 
 router.delete('/', function(req, res, next){
     const {id}=req.query;

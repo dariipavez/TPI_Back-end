@@ -32,6 +32,20 @@ router.get('/', function(req, res, next){
     });
 });
 
+router.get('/marcas', function(req, res, next){
+    const sql = "SELECT * FROM marca";
+    conexion.query(sql, function(error, result){
+        if (error) {
+            console.error(error);
+            return res.status(500).send(error);
+        }
+        res.json({
+            status: "ok",
+            marca: result
+        });
+    });
+});
+
 router.put('/', function(req, res, next) {
     const { id } = req.query;
     const { nombre } = req.body;
@@ -54,7 +68,7 @@ router.put('/', function(req, res, next) {
 });
 
 
-router.delete('/:id', function(req, res, next) {
+router.delete('/', function(req, res, next) {
     const { id } = req.params;
     const sql = "DELETE FROM marca WHERE id=?";
 

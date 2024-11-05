@@ -1,7 +1,7 @@
 const router=require('express').Router();
-//const{ verificarToken }=require('@damianegreco/hashpass')
+const{ verificarToken }=require('@damianegreco/hashpass')
 
-const TOKEN_SECRET = '47355966'
+const TOKEN_SECRET = '46087388'
 
 //importar cada recurso de la API
 const usuariosRouter=require('./usuarios');
@@ -18,11 +18,10 @@ router.use('/productos', productosRouter);
 router.use('/marca', marcaRouter);
 router.use('/talle', talleRouter);
 router.use('/categoria', categoriaRouter);
-router.use('/envio', envioRouter);
 router.use('/metodo_pago', metodo_de_pagoRouter);
 
 //primero la verificacion, le sigue la ruta a la que se quiere acceder
-router.use('/productos', function(req,res,next){
+router.use('/envio', function(req,res,next){
     const token=req.headers.authorization;
     const verificacion= verificarToken(token, TOKEN_SECRET);
     if(verificacion?.data!==undefined){
@@ -33,5 +32,5 @@ router.use('/productos', function(req,res,next){
     }
 })
 //modificar, es para acceder utilizando el token para verificar.
-
+router.use('/envio', envioRouter);
 module.exports=router;

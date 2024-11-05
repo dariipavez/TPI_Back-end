@@ -3,23 +3,18 @@ const router=require('express').Router()
 const {conexion}=require('../db/conexion')
 
 function actualizarEnvio(id, campos, res) {
-    let sql = 'UPDATE envio SET ';
-    const valores = [];
-
-    for (let campo in campos) {
-        sql += `${campo} = ?, `;
-        valores.push(campos[campo]);
-    }
-
-    sql = sql.slice(0, -2) + ' WHERE id = ?';
-    valores.push(id);
-
-    conexion.query(sql, valores, function(error) {
+    const sql_actualizar_Envio = 'UPDATE envio SET ? WHERE id = ?';
+    conexion.query(sql_actualizar_Envio, [campos, id], function(error, result) {
         if (error) {
             console.error(error);
-            return res.status(500).json({ error: error.message });
+            return res.status(500).json({ error: 'Error al actualizar el Envio' });
         }
-        res.json({ status: "ok", mensaje: "Envio actualizado correctamente" });
+
+        if (result.filasAfectadas === 0) {
+            return res.status(404).json({ error: 'No se encontró el Envio para actualizar' });
+        }
+
+        res.json({ status: 'ok', Mensaje: 'Envio actualizado correctamente' });
     });
 }
 
