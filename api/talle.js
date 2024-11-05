@@ -1,11 +1,12 @@
 const router = require('express').Router();
 const { conexion } = require('../db/conexion');
 
-router.post('/', function(req, res, next){
-    const { nombre } = req.body;
-    const sql = "INSERT INTO marca (nombre) VALUES (?)";
+// Create
+router.post('/', function(req, res, next) {
+    const { talles, id_tipo_producto } = req.body;
+    const sql = "INSERT INTO talles (talles, id_tipo_producto) VALUES (?, ?)";
 
-    conexion.query(sql, [nombre], function(error, result){
+    conexion.query(sql, [talles, id_tipo_producto], function(error, result) {
         if (error) {
             console.error(error);
             return res.status(500).send(error);
@@ -17,46 +18,10 @@ router.post('/', function(req, res, next){
     });
 });
 
-router.get('/', function(req, res, next){
+// Read
+router.get('/', function(req, res, next) {
     const { id } = req.query;
-    const sql = "SELECT * FROM marca WHERE id=?";
-    conexion.query(sql, [id], function(error, result){
-        if (error) {
-            console.error(error);
-            return res.status(500).send(error);
-        }
-        res.json({
-            status: "ok",
-            marca: result
-        });
-    });
-});
-
-router.put('/', function(req, res, next) {
-    const { id } = req.query;
-    const { nombre } = req.body;
-    
-    if (!id || !nombre) {
-        return res.status(400).json({ error: 'ID y nombre son requeridos' });
-    }
-
-    const sql = "UPDATE marca SET nombre=? WHERE id=?";
-    
-    conexion.query(sql, [nombre, id], function(error, result) {
-        if (error) {
-            console.error(error);
-            return res.status(500).send(error);
-        }
-        res.json({
-            status: "ok",
-        });
-    });
-});
-
-
-router.delete('/:id', function(req, res, next) {
-    const { id } = req.params;
-    const sql = "DELETE FROM marca WHERE id=?";
+    const sql = "SELECT * FROM talles WHERE id=?";
 
     conexion.query(sql, [id], function(error, result) {
         if (error) {
@@ -64,10 +29,45 @@ router.delete('/:id', function(req, res, next) {
             return res.status(500).send(error);
         }
         res.json({
-            status: "ok"
+            status: "ok",
+            talles: result
         });
     });
 });
 
+// Update
+router.put('/:id', function(req, res, next) {
+    const { id } = req.params;
+    const { talles, id_tipo_producto } = req.body;
+    const sql = "UPDATE talles SET talles=?, id_tipo_producto=? WHERE id=?";
+
+    conexion.query(sql, [talles, id_tipo_producto, id], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).send(error);
+        }
+        res.json({
+            status: "ok",
+            affectedRows: result.affectedRows
+        });
+    });
+});
+
+// Delete
+router.delete('/:id', function(req, res, next) {
+    const { id } = req.params;
+    const sql = "DELETE FROM talles WHERE id=?";
+
+    conexion.query(sql, [id], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).send(error);
+        }
+        res.json({
+            status: "ok",
+            affectedRows: result.affectedRows
+        });
+    });
+});
 
 module.exports = router;
