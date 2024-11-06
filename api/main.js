@@ -11,6 +11,7 @@ const talleRouter=require('./talle');
 const categoriaRouter=require('./categoria');
 const envioRouter=require('./envio');
 const metodo_de_pagoRouter=require('./metodo_pago');
+const compraRouter=require('./compra');
 
 //redirigir a los recursos segun la ruta
 router.use('/usuarios', usuariosRouter);
@@ -20,6 +21,8 @@ router.use('/talle', talleRouter);
 router.use('/categoria', categoriaRouter);
 router.use('/envio', envioRouter);
 router.use('/metodo_pago', metodo_de_pagoRouter);
+router.use('/compra', compraRouter);
+
 
 //primero la verificacion, le sigue la ruta a la que se quiere acceder
 router.use('/productos', function(req,res,next){
