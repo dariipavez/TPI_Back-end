@@ -20,10 +20,10 @@ function actualizarTalle(id, campos, res) {
 
 
 router.post('/', function(req, res, next) {
-    const { talles, id_tipo_producto } = req.body;
-    const sql_verificar_tipo_producto = "SELECT * FROM tipo_producto WHERE id = ?";
-    
-    conexion.query(sql_verificar_tipo_producto, [id_tipo_producto], function(error, results) {
+    const { talle, nombre_tipo_producto } = req.body;
+    const sql_verificar_tipo_producto = "SELECT id FROM tipo_producto WHERE nombre = ?";
+
+    conexion.query(sql_verificar_tipo_producto, [nombre_tipo_producto], function(error, results) {
         if (error) {
             console.error(error);
             return res.status(500).send("Error en la base de datos.");
@@ -33,9 +33,11 @@ router.post('/', function(req, res, next) {
             return res.status(400).json({ Mensaje: "El tipo de producto no existe." });
         }
 
-        const sql_insert_talles = "INSERT INTO talles (talles, id_tipo_producto) VALUES (?, ?)";
+        const tipo_producto_id = results[0].id;
+
+        const sql_insert_talles = "INSERT INTO talles (talle, id_tipo_producto) VALUES (?, ?)";
         
-        conexion.query(sql_insert_talles, [talles, id_tipo_producto], function(error, result) {
+        conexion.query(sql_insert_talles, [talle, tipo_producto_id], function(error, result) {
             if (error) {
                 console.error(error);
                 return res.status(500).send("Error en la inserción de datos.");
@@ -47,6 +49,7 @@ router.post('/', function(req, res, next) {
         });
     });
 });
+
 
 
 router.get('/', function(req, res, next) {

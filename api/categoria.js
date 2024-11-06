@@ -19,6 +19,21 @@ function actualizarCategoria(id, campos, res) {
     });
 }
 
+function actualizar_tipo_producto(id, campos, res) {
+    const sql_actualizar_tipo_producto = 'UPDATE tipo_producto SET ? WHERE id = ?';
+    conexion.query(sql_actualizar_tipo_producto, [campos, id], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'Error al actualizar la categoria' });
+        }
+
+        if (result.filasAfectadas === 0) {
+            return res.status(404).json({ error: 'No se encontró la categoria para actualizar' });
+        }
+
+        res.json({ status: 'ok', Mensaje: 'Categoria actualizada correctamente' });
+    });
+}
 
 
 
@@ -145,22 +160,38 @@ router.delete('/', function(req, res, next){
 });
 
 //ruta tipo_producto
-router.post('/tipo_producto', function(req, res, next){
-    const {nombre}=req.body;
+router.post('/tipo_producto', function(req, res, next) {
+    const { nombre } = req.body;
 
-    const sql="INSERT INTO tipo_producto (nombre) VALUES (?)"
-
-    conexion.query(sql, [nombre], function(error,result){
-        if(error){
+    const sql_verificar = "SELECT id FROM tipo_producto WHERE nombre = ?";
+    conexion.query(sql_verificar, [nombre], function(error, results) {
+        if (error) {
             console.error(error);
             return res.status(500).send(error);
         }
-        res.json({
-            status:"ok",
-            id:result.insertId
+
+        if (results.length > 0) {
+            return res.status(400).json({
+                status: "error",
+                mensaje: "El tipo de producto ya existe"
+            });
+        }
+
+        const sql_insertar = "INSERT INTO tipo_producto (nombre) VALUES (?)";
+        conexion.query(sql_insertar, [nombre], function(error, result) {
+            if (error) {
+                console.error(error);
+                return res.status(500).send(error);
+            }
+            res.json({
+                status: "ok",
+                mensaje: "Tipo de producto registrado correctamente",
+                id: result.insertId
+            });
         });
     });
 });
+
 
 router.get("/tipo_producto", function(req, res, next){
     const { id }=req.query
@@ -185,53 +216,64 @@ router.put('/tipo_producto', function(req, res) {
         return res.status(400).json({ error: 'Se necesita el id del tipo de producto' });
     }
 
-    // Primero, verifica si el tipo de producto existe
-    const sqlCheck = 'SELECT * FROM tipo_producto WHERE id = ?';
-    conexion.query(sqlCheck, [id], function(error, results) {
+    const sql_verificar_tipo_producto = 'SELECT * FROM tipo_producto WHERE id = ?';
+    conexion.query(sql_verificar_tipo_producto, [id], function(error, results) {
         if (error) {
             console.error(error);
             return res.status(500).json({ error: 'Error al verificar el tipo de producto' });
         }
 
-        // Si no se encuentra el producto, envía un mensaje de error
         if (results.length === 0) {
             return res.status(404).json({ error: 'Tipo de producto no encontrado' });
         }
 
-        // Si el tipo de producto existe, procede con la actualización
-        let sql = 'UPDATE tipo_producto SET ';
-        const valores = [];
+        if (campos.nombre) {
+            const sql = 'UPDATE tipo_producto SET nombre = ? WHERE id = ?';
+            conexion.query(sql, [campos.nombre, id], function(error) {
+                if (error) {
+                    console.error(error);
+                    return res.status(500).json({ error: error.message });
+                }
+                res.json({ status: "ok", mensaje: "Tipo de producto actualizado correctamente" });
+            });
+        } else {
+            res.status(400).json({ error: 'No se especificó el nombre para actualizar' });
+        }
+    });
+});
 
-        for (let campo in campos) {
-            sql += `${campo} = ?, `;
-            valores.push(campos[campo]);
+
+
+router.delete('/tipo_producto', function(req, res, next) {
+    const { id } = req.query;
+    const sql_eliminar_talle = "DELETE FROM talles WHERE id_tipo_producto = ?";
+    conexion.query(sql_eliminar_talle, [id], function(error) {
+        if (error) {
+            console.error(error);
+            return res.status(500).send("Ocurrió un error al eliminar las categorías");
         }
 
-        sql = sql.slice(0, -2) + ' WHERE id = ?';
-        valores.push(id);
+    
+    const sql_eliminar_categoria = "DELETE FROM categoria WHERE id_tipo_producto = ?";
+    conexion.query(sql_eliminar_categoria, [id], function(error) {
+        if (error) {
+            console.error(error);
+            return res.status(500).send("Ocurrió un error al eliminar las categorías");
+        }
 
-        conexion.query(sql, valores, function(error) {
+        const sql_eliminar_tipo_producto = "DELETE FROM tipo_producto WHERE id = ?";
+        conexion.query(sql_eliminar_tipo_producto, [id], function(error) {
             if (error) {
                 console.error(error);
-                return res.status(500).json({ error: error.message });
+                return res.status(500).send("Ocurrió un error al eliminar el tipo de producto");
             }
-            res.json({ status: "ok", mensaje: "Tipo de producto actualizado correctamente" });
+
+            res.json({
+                status: "ok",
+                message:"El tipo de producto fue eliminado"
+            });
         });
     });
-});
+});})
 
-
-router.delete('/tipo_producto', function(req, res, next){
-    const {id}=req.query;
-    const sql="DELETE FROM tipo_producto WHERE id=?"
-    conexion.query(sql,[id],function(error){
-        if(error){
-            console.error(error);
-            return res.status(500).send("ocurrió un error");
-        }
-        res.json({
-            status:"ok"
-        });
-    });
-});
 module.exports = router;

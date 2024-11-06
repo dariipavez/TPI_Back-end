@@ -16,6 +16,22 @@ const checkUser=function(nombre_usuario){
         } )
     })
 }
+
+function actualizarUsuario(id, campos, res) {
+    const sql_actualizar_usuario = 'UPDATE usuarios SET ? WHERE id = ?';
+    conexion.query(sql_actualizar_usuario, [campos, id], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'Error al actualizar el Usuario' });
+        }
+
+        if (result.filasAfectadas === 0) {
+            return res.status(404).json({ error: 'No se encontró el Usuario para actualizar' });
+        }
+
+        res.json({ status: 'ok', Mensaje: 'Usuario actualizado correctamente' });
+    });
+}
 //tablas siempre en minuscula, al unir palabras con guion bajo
 
 const guardarUsuario=function(nombre_usuario,contraseñaHash, nombre_completo, fecha_nac, mail, rol,telefono){
@@ -89,28 +105,11 @@ router.put('/', function(req, res) {
     if (!id) {
         return res.status(400).json({ error: 'Se necesita el id del usuario' });
     }
-
-    let sql = 'UPDATE usuarios SET ';
-    const valores = [];
-
-    for (let campo in campos) {
-        if (campo === 'contraseña') {
-            campos[campo] = hashPass(campos[campo]);
-        }
-        sql += `${campo} = ?, `;
-        valores.push(campos[campo]);
+    if (campos.contraseña) {
+        campos.contraseña = hashPass(campos.contraseña);
     }
 
-    sql = sql.slice(0, -2) + ' WHERE id = ?';
-    valores.push(id);
-
-    conexion.query(sql, valores, function(error) {
-        if (error) {
-            console.error(error);
-            return res.status(500).json({ error: error.message });
-        }
-        res.json({ status: "ok", Mensaje: "Usuario actualizado correctamente" });
-    });
+    actualizarUsuario(id, campos, res);
 });
 
 
