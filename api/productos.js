@@ -1,27 +1,68 @@
-const express = require('express');
-const router = express.Router();
-const {conexion} = require('../db/conexion') 
+const express=require("express");
+const { conexion }=require("../db/conexion");
+const router=express.Router();
 
-// // Ruta para registrar un producto
-// router.post('/register', (req, res) => {
-//   const { nombre, id_marca, id_categoria, id_tipo_producto, precio, stock, ruta_imagen, id_talles } = req.body;
-  
-//   // Verificar que todos los campos están presentes
-//   if (!nombre || !id_marca || !id_categoria || !id_tipo_producto || !precio || !stock || !ruta_imagen || !id_talles) {
-//     return res.status(400).json({ error: 'Por favor, complete todos los campos' });
-//   }
+router.get("/", function(req, res, next){
+    const { id }=req.query
+    const sql="SELECT * FROM productos WHERE id=?";
+    conexion.query(sql,[id],function(error,result){
+        if(error){
+            console.error(error);
+            return res.status(500).send(error);
+        }
+        res.json({
+            status:"ok",
+            Producto:result
+        });
+    });
+});
 
-//   // Consulta SQL para insertar un nuevo producto
-//   const query = `INSERT INTO productos (nombre, id_marca, id_categoria, id_tipo_producto, precio, stock, ruta_imagen, id_talles)VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-  
-//   db.query(query, [nombre, id_marca, id_categoria, id_tipo_producto, precio, stock, ruta_imagen, id_talles], (err, result) => {
-//     if (err) {
-//       return res.status(500).json({ error: 'Error al registrar el producto' });
-//     }
+router.post('/', function(req, res, next){
+    const {}=req.body;
 
-//     // Respuesta exitosa
-//     return res.status(201).json({ message: 'Producto registrado correctamente' });
-//   });
-// });
+    const sql="INSERT INTO productos (documento, nombres, apellidos, domicilio, telefono) VALUES (?,?,?,?,?)"
 
-module.exports = router;
+    conexion.query(sql, [documento,nombres,apellidos,domicilio, telefono], function(error,result){
+        if(error){
+            console.error(error);
+            return res.status(500).send(error);
+        }
+        res.json({
+            status:"ok",
+            id:result[0].id
+        });
+    });
+});
+
+router.put('/', function(req, res, next){
+    const { documento,nombres,apellidos,domicilio,telefono }= req.body;
+    const { id }=req.query;
+
+    const sql="UPDATE productos SET documento=?, nombres=?, apellidos=?, domicilio=?, telefono=? WHERE id=?"
+    conexion.query(sql, [documento,nombres,apellidos,domicilio, telefono,id], function(error){
+        if(error){
+            console.error(error);
+            return res.status(500).send(error);
+        }
+        res.json({
+            status:"ok"
+        });
+    });
+
+});
+
+router.delete('/', function(req, res, next){
+    const {id}=req.query;
+    const sql="DELETE FROM productos WHERE id=?"
+    conexion.query(sql,[id],function(error){
+        if(error){
+            console.error(error);
+            return res.status(500).send("ocurrió un error");
+        }
+        res.json({
+            status:"ok"
+        });
+    });
+});
+
+module.exports=router;

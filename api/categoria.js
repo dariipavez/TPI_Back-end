@@ -1,7 +1,5 @@
-const router=require('express').Router()
-
-const {conexion}=require('../db/conexion')
-
+const router = require('express').Router();
+const { conexion } = require('../db/conexion');
 
 function actualizarCategoria(id, campos, res) {
     let sql = 'UPDATE categoria SET ';
@@ -24,10 +22,7 @@ function actualizarCategoria(id, campos, res) {
     });
 }
 
-
-
-
-router.post('/', function(req, res, next) {
+router.post('/', function(req, res) {
     const { nombre, nombre_tipo_producto } = req.body;
 
     const sql_obtener_tipo_producto_id = "SELECT id FROM tipo_producto WHERE nombre = ?";
@@ -45,7 +40,7 @@ router.post('/', function(req, res, next) {
         const tipo_producto_id = result[0].id;
 
         const sql_verificar_categoria = "SELECT id FROM categoria WHERE nombre = ? AND id_tipo_producto = ?";
-        
+
         conexion.query(sql_verificar_categoria, [nombre, tipo_producto_id], function(error, resultExiste) {
             if (error) {
                 console.error(error);
@@ -74,19 +69,21 @@ router.post('/', function(req, res, next) {
     });
 });
 
-
-
-router.get("/", function(req, res, next) {
+router.get("/", function(req, res) {
     const { id } = req.query;
-    const sql = 
-        "SELECT categoria.*, tipo_producto.nombre AS nombre_tipo_producto FROM categoria JOIN tipo_producto ON categoria.id_tipo_producto = tipo_producto.id WHERE categoria.id = ?";
+    const sql = `
+        SELECT categoria.*, tipo_producto.nombre AS nombre_tipo_producto 
+        FROM categoria 
+        JOIN tipo_producto ON categoria.id_tipo_producto = tipo_producto.id 
+        WHERE categoria.id = ?
+    `;
 
     conexion.query(sql, [id], function(error, result) {
         if (error) {
             console.error(error);
             return res.status(500).send(error);
         }
-        
+
         res.json({
             status: "ok",
             categoria: result
@@ -133,50 +130,49 @@ router.put('/', function(req, res) {
     });
 });
 
+router.delete('/', function(req, res) {
+    const { id } = req.query;
+    const sql = "DELETE FROM categoria WHERE id = ?";
 
-router.delete('/', function(req, res, next){
-    const {id}=req.query;
-    const sql="DELETE FROM categoria WHERE id=?"
-    conexion.query(sql,[id],function(error){
-        if(error){
+    conexion.query(sql, [id], function(error) {
+        if (error) {
             console.error(error);
-            return res.status(500).send("ocurrió un error");
+            return res.status(500).send("Ocurrió un error");
         }
+        res.json({ status: "ok" });
+    });
+});
+
+router.post('/tipo_producto', function(req, res) {
+    const { nombre } = req.body;
+    const sql = "INSERT INTO tipo_producto (nombre) VALUES (?)";
+
+    conexion.query(sql, [nombre], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).send(error);
+        }
+
         res.json({
-            status:"ok"
+            status: "ok",
+            id: result.insertId
         });
     });
 });
 
-//ruta tipo_producto
-router.post('/tipo_producto', function(req, res, next){
-    const {nombre}=req.body;
+router.get("/tipo_producto", function(req, res) {
+    const { id } = req.query;
+    const sql = "SELECT * FROM tipo_producto WHERE id = ?";
 
-    const sql="INSERT INTO tipo_producto (nombre) VALUES (?)"
-
-    conexion.query(sql, [nombre], function(error,result){
-        if(error){
+    conexion.query(sql, [id], function(error, result) {
+        if (error) {
             console.error(error);
             return res.status(500).send(error);
         }
-        res.json({
-            status:"ok",
-            id:result.insertId
-        });
-    });
-});
 
-router.get("/tipo_producto", function(req, res, next){
-    const { id }=req.query
-    const sql="SELECT * FROM tipo_producto WHERE id=?";
-    conexion.query(sql,[id],function(error,result){
-        if(error){
-            console.error(error);
-            return res.status(500).send(error);
-        }
         res.json({
-            status:"ok",
-            tipo_producto:result
+            status: "ok",
+            tipo_producto: result
         });
     });
 });
@@ -189,7 +185,6 @@ router.put('/tipo_producto', function(req, res) {
         return res.status(400).json({ error: 'Se necesita el id del tipo de producto' });
     }
 
-    // Primero, verifica si el tipo de producto existe
     const sqlCheck = 'SELECT * FROM tipo_producto WHERE id = ?';
     conexion.query(sqlCheck, [id], function(error, results) {
         if (error) {
@@ -197,12 +192,10 @@ router.put('/tipo_producto', function(req, res) {
             return res.status(500).json({ error: 'Error al verificar el tipo de producto' });
         }
 
-        // Si no se encuentra el producto, envía un mensaje de error
         if (results.length === 0) {
             return res.status(404).json({ error: 'Tipo de producto no encontrado' });
         }
 
-        // Si el tipo de producto existe, procede con la actualización
         let sql = 'UPDATE tipo_producto SET ';
         const valores = [];
 
@@ -219,23 +212,24 @@ router.put('/tipo_producto', function(req, res) {
                 console.error(error);
                 return res.status(500).json({ error: error.message });
             }
+
             res.json({ status: "ok", mensaje: "Tipo de producto actualizado correctamente" });
         });
     });
 });
 
+router.delete('/tipo_producto', function(req, res) {
+    const { id } = req.query;
+    const sql = "DELETE FROM tipo_producto WHERE id = ?";
 
-router.delete('/tipo_producto', function(req, res, next){
-    const {id}=req.query;
-    const sql="DELETE FROM tipo_producto WHERE id=?"
-    conexion.query(sql,[id],function(error){
-        if(error){
+    conexion.query(sql, [id], function(error) {
+        if (error) {
             console.error(error);
-            return res.status(500).send("ocurrió un error");
+            return res.status(500).send("Ocurrió un error");
         }
-        res.json({
-            status:"ok"
-        });
+
+        res.json({ status: "ok" });
     });
 });
+
 module.exports = router;
