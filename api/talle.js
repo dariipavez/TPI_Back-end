@@ -18,12 +18,12 @@ function actualizarTalle(id, campos, res) {
 }
 
 
-
 router.post('/', function(req, res, next) {
-    const { talle, nombre_tipo_producto } = req.body;
-    const sql_verificar_tipo_producto = "SELECT id FROM tipo_producto WHERE nombre = ?";
+    const { talle, id_tipo_producto } = req.body;
+    //Se verifica si en la tabla categoria existe el id_tipo_producto para verificar que ya tenga su categoria
+    const sql_verificar_tipo_producto = "SELECT tipo_producto.id FROM tipo_producto INNER JOIN categoria ON categoria.id_tipo_producto = tipo_producto.id WHERE tipo_producto.id = ?";
 
-    conexion.query(sql_verificar_tipo_producto, [nombre_tipo_producto], function(error, results) {
+    conexion.query(sql_verificar_tipo_producto, [id_tipo_producto], function(error, results) {
         if (error) {
             console.error(error);
             return res.status(500).send("Error en la base de datos.");
@@ -33,15 +33,14 @@ router.post('/', function(req, res, next) {
             return res.status(400).json({ Mensaje: "El tipo de producto no existe." });
         }
 
-        const tipo_producto_id = results[0].id;
-
         const sql_insert_talles = "INSERT INTO talles (talle, id_tipo_producto) VALUES (?, ?)";
         
-        conexion.query(sql_insert_talles, [talle, tipo_producto_id], function(error, result) {
+        conexion.query(sql_insert_talles, [talle, id_tipo_producto], function(error, result) {
             if (error) {
                 console.error(error);
                 return res.status(500).send("Error en la inserción de datos.");
             }
+
             res.json({
                 status: "ok",
                 id: result.insertId
@@ -49,6 +48,7 @@ router.post('/', function(req, res, next) {
         });
     });
 });
+
 
 
 

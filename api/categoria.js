@@ -19,70 +19,41 @@ function actualizarCategoria(id, campos, res) {
     });
 }
 
-function actualizar_tipo_producto(id, campos, res) {
-    const sql_actualizar_tipo_producto = 'UPDATE tipo_producto SET ? WHERE id = ?';
-    conexion.query(sql_actualizar_tipo_producto, [campos, id], function(error, result) {
-        if (error) {
-            console.error(error);
-            return res.status(500).json({ error: 'Error al actualizar la categoria' });
-        }
-
-        if (result.filasAfectadas === 0) {
-            return res.status(404).json({ error: 'No se encontró la categoria para actualizar' });
-        }
-
-        res.json({ status: 'ok', Mensaje: 'Categoria actualizada correctamente' });
-    });
-}
-
 
 
 router.post('/', function(req, res, next) {
-    const { nombre, nombre_tipo_producto } = req.body;
+    const { nombre, id_tipo_producto } = req.body;
 
-    const sql_obtener_tipo_producto_id = "SELECT id FROM tipo_producto WHERE nombre = ?";
+    const sql_verificar_categoria = 
+    "SELECT categoria.id, tipo_producto.id FROM categoria INNER JOIN tipo_producto ON tipo_producto.id = categoria.id_tipo_producto WHERE categoria.nombre = ? AND tipo_producto.id = ?";
 
-    conexion.query(sql_obtener_tipo_producto_id, [nombre_tipo_producto], function(error, result) {
+    conexion.query(sql_verificar_categoria, [nombre, id_tipo_producto], function(error, resultExiste) {
         if (error) {
             console.error(error);
             return res.status(500).send(error);
         }
 
-        if (result.length === 0) {
-            return res.status(404).json({ status: "error", mensaje: "Tipo de producto no encontrado" });
+        if (resultExiste.length > 0) {
+            return res.status(409).json({ status: "error", mensaje: "La categoría para el tipo de producto ya está registrada" });
         }
 
-        const tipo_producto_id = result[0].id;
+        const sql_insert_categoria = "INSERT INTO categoria (nombre, id_tipo_producto) VALUES (?, ?)";
 
-        const sql_verificar_categoria = "SELECT id FROM categoria WHERE nombre = ? AND id_tipo_producto = ?";
-        
-        conexion.query(sql_verificar_categoria, [nombre, tipo_producto_id], function(error, resultExiste) {
+        conexion.query(sql_insert_categoria, [nombre, id_tipo_producto], function(error, resultCategoria) {
             if (error) {
                 console.error(error);
                 return res.status(500).send(error);
             }
 
-            if (resultExiste.length > 0) {
-                return res.status(409).json({ status: "error", mensaje: "El tipo de producto ya está registrado" });
-            }
-
-            const sql_insert_categoria = "INSERT INTO categoria (nombre, id_tipo_producto) VALUES (?, ?)";
-
-            conexion.query(sql_insert_categoria, [nombre, tipo_producto_id], function(error, resultCategoria) {
-                if (error) {
-                    console.error(error);
-                    return res.status(500).send(error);
-                }
-
-                res.json({
-                    status: "ok",
-                    categoria_id: resultCategoria.insertId,
-                    tipo_producto_id: tipo_producto_id
-                });
+            res.json({
+                status: "ok",
+                categoria_id: resultCategoria.insertId,
+                id_tipo_producto: id_tipo_producto
             });
         });
     });
 });
+
 
 
 
@@ -106,7 +77,7 @@ router.get("/", function(req, res, next) {
 
 router.put('/', function(req, res) {
     const { id } = req.query;
-    const campos = req.body;
+    const { id_tipo_producto, ...campos } = req.body;
 
     if (!id) {
         return res.status(400).json({ error: 'Se necesita el id de la categoría' });
@@ -123,19 +94,20 @@ router.put('/', function(req, res) {
             return res.status(404).json({ error: 'Categoría no encontrada' });
         }
 
-        if (campos.nombre_tipo_producto) {
-            const sql_obtener_tipo_producto_id = 'SELECT id FROM tipo_producto WHERE nombre = ?';
-            conexion.query(sql_obtener_tipo_producto_id, [campos.nombre_tipo_producto], function(error, productoResult) {
+        if (id_tipo_producto) {
+            const sql_verificar_tipo_producto = 'SELECT * FROM tipo_producto WHERE id = ?';
+            conexion.query(sql_verificar_tipo_producto, [id_tipo_producto], function(error, tipoProductoResult) {
                 if (error) {
                     console.error(error);
                     return res.status(500).json({ error: 'Error al verificar el tipo de producto' });
                 }
 
-                if (productoResult.length === 0) {
+                if (tipoProductoResult.length === 0) {
                     return res.status(404).json({ error: 'Tipo de producto no encontrado' });
                 }
-                campos.id_tipo_producto = productoResult[0].id;
-                delete campos.nombre_tipo_producto;
+
+
+                campos.id_tipo_producto = id_tipo_producto;
 
                 actualizarCategoria(id, campos, res);
             });
@@ -244,36 +216,30 @@ router.put('/tipo_producto', function(req, res) {
 
 
 
-router.delete('/tipo_producto', function(req, res, next) {
+router.delete('/', function(req, res, next) {
     const { id } = req.query;
-    const sql_eliminar_talle = "DELETE FROM talles WHERE id_tipo_producto = ?";
-    conexion.query(sql_eliminar_talle, [id], function(error) {
+
+    const sql_eliminar_productos_compra = "DELETE FROM productos_compra WHERE id_producto = ?";
+    conexion.query(sql_eliminar_productos_compra, [id], function(error) {
         if (error) {
             console.error(error);
-            return res.status(500).send("Ocurrió un error al eliminar las categorías");
+            return res.status(500).send("Ocurrió un error al eliminar los registros en productos_compra");
         }
 
-    
-    const sql_eliminar_categoria = "DELETE FROM categoria WHERE id_tipo_producto = ?";
-    conexion.query(sql_eliminar_categoria, [id], function(error) {
-        if (error) {
-            console.error(error);
-            return res.status(500).send("Ocurrió un error al eliminar las categorías");
-        }
-
-        const sql_eliminar_tipo_producto = "DELETE FROM tipo_producto WHERE id = ?";
-        conexion.query(sql_eliminar_tipo_producto, [id], function(error) {
+        const sql_eliminar_producto = "DELETE FROM productos WHERE id = ?";
+        conexion.query(sql_eliminar_producto, [id], function(error) {
             if (error) {
                 console.error(error);
-                return res.status(500).send("Ocurrió un error al eliminar el tipo de producto");
+                return res.status(500).send("Ocurrió un error al eliminar el producto");
             }
 
             res.json({
                 status: "ok",
-                message:"El tipo de producto fue eliminado"
+                message: "El producto y sus registros en productos_compra fueron eliminados correctamente"
             });
         });
     });
-});})
+});
+
 
 module.exports = router;
