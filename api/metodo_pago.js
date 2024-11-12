@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { conexion } = require('../db/conexion');
-
+//terminado
 router.post('/', function(req, res, next) {
     const { tipo_pago } = req.body;
     const sql = "INSERT INTO metodo_pago (tipo_pago) VALUES (?)";
@@ -17,8 +17,8 @@ router.post('/', function(req, res, next) {
     });
 });
 
-router.get('/', function(req, res, next) {
-    const { id } = req.query;
+router.get('/:id?', function(req, res, next) {
+    const { id } = req.params;
     const sql = id ? "SELECT * FROM metodo_pago WHERE id=?" : "SELECT * FROM metodo_pago";
 
     conexion.query(sql, id ? [id] : [], function(error, result) {
@@ -33,8 +33,8 @@ router.get('/', function(req, res, next) {
     });
 });
 
-router.put('/', function(req, res, next) {
-    const { id } = req.query;
+router.put('/:id', function(req, res, next) {
+    const { id } = req.params;
     const { tipo_pago } = req.body;
 
     if (!id || !tipo_pago) {
@@ -49,8 +49,7 @@ router.put('/', function(req, res, next) {
             return res.status(500).send(error);
         }
         res.json({
-            status: "ok",
-            affectedRows: result.affectedRows
+            status: "ok"
         });
     });
 });
@@ -66,7 +65,6 @@ router.delete('/:id', function(req, res, next) {
         }
         res.json({
             status: "ok",
-            affectedRows: result.affectedRows
         });
     });
 });
