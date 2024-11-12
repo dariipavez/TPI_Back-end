@@ -4,7 +4,7 @@ const apiRouter=require('./api/main');
 const multer= require('multer')
 
 
-const port = 3001;
+const port = 3000;
 
 
 const upload=multer({dest: 'uploads/'})

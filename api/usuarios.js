@@ -17,21 +17,6 @@ const checkUser=function(nombre_usuario){
     })
 }
 
-function actualizarUsuario(id, campos, res) {
-    const sql_actualizar_usuario = 'UPDATE usuarios SET ? WHERE id = ?';
-    conexion.query(sql_actualizar_usuario, [campos, id], function(error, result) {
-        if (error) {
-            console.error(error);
-            return res.status(500).json({ error: 'Error al actualizar el Usuario' });
-        }
-
-        if (result.filasAfectadas === 0) {
-            return res.status(404).json({ error: 'No se encontró el Usuario para actualizar' });
-        }
-
-        res.json({ status: 'ok', Mensaje: 'Usuario actualizado correctamente' });
-    });
-}
 //tablas siempre en minuscula, al unir palabras con guion bajo
 
 const guardarUsuario=function(nombre_usuario,contraseñaHash, nombre_completo, fecha_nac, mail, rol,telefono){
@@ -49,10 +34,18 @@ const guardarUsuario=function(nombre_usuario,contraseñaHash, nombre_completo, f
 
 router.post('/',function(req,res,next){
     const {nombre_usuario,contraseña,nombre_completo, fecha_nac, mail, rol, telefono}=req.body;
+
+    const rolMin = (rol && rol.toLowerCase()) || 'usuario';
+    const rolValido = ['usuario', 'administrador'];
+    if (!rolValido.includes(rolMin)) {
+        return res.status(400).json({ status: 'error', error: 'Rol inválido' });
+    }
+
     checkUser(nombre_usuario)
     .then(()=>{
         const contraseñaHasheada=hashPass(contraseña);
-        guardarUsuario(nombre_usuario, contraseñaHasheada, nombre_completo, fecha_nac, mail, rol, telefono)
+        const rolMin=rol.toLowerCase()
+        guardarUsuario(nombre_usuario, contraseñaHasheada, nombre_completo, fecha_nac, mail, rolMin, telefono)
         .then((usuario_id) => {
             res.json({
                 status:"ok",
@@ -74,7 +67,7 @@ router.post("/login",function(req,res,next){
     const {nombre_usuario,contraseña}=req.body;
 
 
-    const sql='SELECT id,nombre_usuario,contraseña FROM usuarios WHERE nombre_usuario= ?'
+    const sql='SELECT id,nombre_usuario,contraseña,rol FROM usuarios WHERE nombre_usuario= ?'
     conexion.query(sql,[nombre_usuario], function(error,result){
         if(error){
             console.error(error);
@@ -87,7 +80,7 @@ router.post("/login",function(req,res,next){
         
         if (verificarPass(contraseña, result[0].contraseña)) {
             console.log('Inicio Correctamente');
-            const token = generarToken(TOKEN_SECRET, 6, { usuario_id: result[0].id, usuario: nombre_usuario, ejemplo: "asd" });
+            const token = generarToken(TOKEN_SECRET, 6, { usuario_id: result[0].id, usuario: nombre_usuario, rol: result[0].rol });
             console.log(token);
             return res.json({ status: 'ok', token });
         } else {
@@ -100,16 +93,37 @@ router.post("/login",function(req,res,next){
 
 router.put('/', function(req, res) {
     const { id } = req.query;
-    const campos = req.body;
+    const { nombre_usuario, contraseña, nombre_completo, fecha_nac, mail, rol, telefono } = req.body;
 
     if (!id) {
         return res.status(400).json({ error: 'Se necesita el id del usuario' });
     }
-    if (campos.contraseña) {
-        campos.contraseña = hashPass(campos.contraseña);
+    if (req.user.usuario_id !== parseInt(id) && req.user.rol !== 'administrador') {
+        return res.status(403).json({ status: 'error', error: 'No tienes permisos para actualizar este usuario' });
     }
+    const campos = {
+        ...(nombre_usuario && { nombre_usuario }),
+        ...(nombre_completo && { nombre_completo }),
+        ...(fecha_nac && { fecha_nac }),
+        ...(mail && { mail }),
+        ...(rol && { rol: rol.toLowerCase() }),
+        ...(telefono && { telefono }),
+        ...(contraseña && { contraseña: hashPass(contraseña) })
+    };
 
-    actualizarUsuario(id, campos, res);
+    const sql = "UPDATE usuarios SET ? WHERE id = ?";
+    conexion.query(sql, [campos, id], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'Error al actualizar el usuario' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'No se encontró el usuario para actualizar' });
+        }
+
+        res.json({ status: 'ok', mensaje: 'Usuario actualizado correctamente' });
+    });
 });
 
 
