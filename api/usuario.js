@@ -8,7 +8,7 @@ const TOKEN_SECRET = '46087388';
 
 const checkUser=function(nombre_usuario){
     return new Promise((resolve, reject) => {
-        const sql = 'SELECT id FROM usuarios where nombre_usuario= ?';
+        const sql = 'SELECT id FROM usuario where nombre_usuario= ?';
         conexion.query(sql, [nombre_usuario], function(error,result){
             if(error) return reject(error);
             if (result.length > 0) return reject('Usuario ya existe');
@@ -21,7 +21,7 @@ const checkUser=function(nombre_usuario){
 
 const guardarUsuario=function(nombre_usuario,contraseñaHash, nombre_completo, fecha_nac, mail, rol,telefono){
     return new Promise ((resolve,reject)=>{
-        const sql = "INSERT INTO usuarios (nombre_completo, fecha_nac, mail, nombre_usuario, rol, contraseña,telefono) VALUES (?,?,?,?,?,?,?)";
+        const sql = "INSERT INTO usuario (nombre_completo, fecha_nac, mail, nombre_usuario, rol, contraseña,telefono) VALUES (?,?,?,?,?,?,?)";
         conexion.query(sql, [nombre_completo, fecha_nac, mail, nombre_usuario, rol, contraseñaHash, telefono], function(error, result) {
             if (error) return reject(error);
             console.log(result);
@@ -67,7 +67,7 @@ router.post("/login",function(req,res,next){
     const {nombre_usuario,contraseña}=req.body;
 
 
-    const sql='SELECT id,nombre_usuario,contraseña,rol FROM usuarios WHERE nombre_usuario= ?'
+    const sql='SELECT id,nombre_usuario,contraseña,rol FROM usuario WHERE nombre_usuario= ?'
     conexion.query(sql,[nombre_usuario], function(error,result){
         if(error){
             console.error(error);
@@ -111,7 +111,7 @@ router.put('/', function(req, res) {
         ...(contraseña && { contraseña: hashPass(contraseña) })
     };
 
-    const sql = "UPDATE usuarios SET ? WHERE id = ?";
+    const sql = "UPDATE usuario SET ? WHERE id = ?";
     conexion.query(sql, [campos, id], function(error, result) {
         if (error) {
             console.error(error);
@@ -129,7 +129,7 @@ router.put('/', function(req, res) {
 
 router.delete('/', function(req, res, next){
     const {id}=req.query;
-    const sql="DELETE FROM usuarios WHERE id=?"
+    const sql="DELETE FROM usuario WHERE id=?"
     conexion.query(sql,[id],function(error){
         if(error){
             console.error(error);

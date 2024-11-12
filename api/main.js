@@ -6,31 +6,13 @@ const TOKEN_SECRET = '46087388'
 //terminar las rutas y seleccionar que rutas estan permitidas para el usuario
 function rutasUsuario(req) {
     const rutasPermitidas = [
-            
+            './rutasUsuario'
 
 ];
     return rutasPermitidas.includes(req.path);
 }
 
-//importar cada recurso de la API
-const usuariosRouter=require('./usuarios');
-const marcaRouter=require('./marca');
-const talleRouter=require('./talle');
-const categoriaRouter=require('./categoria');
-const envioRouter=require('./envio');
-const metodo_de_pagoRouter=require('./metodo_pago');
-const productosRouter=require('./productos');
-const productos_compraRouter=require('./productos_compra')
-const compraRouter=require('./compra')
-
-//redirigir a los recursos segun la ruta
-router.use('/usuarios', usuariosRouter);
-router.use('/marca', marcaRouter);
-router.use('/talle', talleRouter);
-router.use('/metodo_pago', metodo_de_pagoRouter);
-
-//primero la verificacion, le sigue la ruta a la que se quiere acceder
-router.use('/categoria', function(req,res,next){
+function verificarRol(req, res, next){
     const token=req.headers.authorization;
     const verificacion= verificarToken(token, TOKEN_SECRET);
     if(verificacion?.data!==undefined){
@@ -44,12 +26,33 @@ router.use('/categoria', function(req,res,next){
         console.error(verificacion);
         res.status(403).json({ status: 'error', error: verificacion });
     }
-});
-router.use('/categoria', categoriaRouter);
+};
+
+//importar cada recurso de la API
+const usuarioRouter=require('./usuario');
+const marcaRouter=require('./marca');
+const talleRouter=require('./talle');
+const categoriaRouter=require('./categoria');
+const envioRouter=require('./envio');
+const metodo_pagoRouter=require('./metodo_pago');
+const productoRouter=require('./producto');
+const producto_compraRouter=require('./producto_compra')
+const compraRouter=require('./compra')
+
+const rutasAdminRouter=require('./rutasAdmin', )
+//redirigir a los recursos segun la ruta
+router.use('/usuario', usuarioRouter);
+router.use('/marca', marcaRouter);
+router.use('/talle', talleRouter);
+router.use('/metodo_pago', metodo_pagoRouter);
+
+//primero la verificacion, le sigue la ruta a la que se quiere acceder
+router.use('/rutasAdmin', verificarRol, rutasAdminRouter)
+    
 
 //modificar, es para acceder utilizando el token para verificar.
 router.use('/envio', envioRouter);
-router.use('/productos',productosRouter)
-router.use('/productos_compra', productos_compraRouter)
+router.use('/producto',productoRouter)
+router.use('/producto_compra', producto_compraRouter)
 router.use('/compra', compraRouter)
 module.exports=router;

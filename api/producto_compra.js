@@ -26,7 +26,7 @@ router.post('/', function(req, res) {
         }
 
         const sql_insert = `
-            INSERT INTO productos_compra (id_producto, id_compra, cantidad, precio_unitario)
+            INSERT INTO producto_compra (id_producto, id_compra, cantidad, precio_unitario)
             VALUES (?, ?, ?, ?);
         `;
 
@@ -37,7 +37,7 @@ router.post('/', function(req, res) {
             }
 
             const sql_update_stock = `
-                UPDATE productos
+                UPDATE producto
                 SET stock = stock - ?
                 WHERE id = ?;
             `;
@@ -62,21 +62,21 @@ router.post('/', function(req, res) {
 router.get('/', function(req, res) {
     const sql = `
         SELECT 
-            productos_compra.id, 
-            productos.nombre AS producto, 
-            productos_compra.cantidad, 
-            productos_compra.precio_unitario, 
+            producto_compra.id, 
+            producto.nombre AS producto, 
+            producto_compra.cantidad, 
+            producto_compra.precio_unitario, 
             compra.precio_total, 
             compra.id_metodo_pago, 
             compra.id_envio
         FROM 
-            productos_compra
+            producto_compra
         INNER JOIN 
-            productos ON productos_compra.id_producto = productos.id
+            producto ON producto_compra.id_producto = productos.id
         INNER JOIN 
-            compra ON productos_compra.id_compra = compra.id
+            compra ON producto_compra.id_compra = compra.id
         WHERE 
-            productos_compra.id = ?
+            producto_compra.id = ?
     `;
 
     const { id } = req.query;
@@ -99,7 +99,7 @@ router.put('/', function(req, res) {
     const { id } = req.query;
     
     const sql = `
-        UPDATE productos_compra 
+        UPDATE producto_compra 
         SET id_producto = ?, id_compra = ?, cantidad = ?, precio_unitario = ? 
         WHERE id = ?
     `;
@@ -120,7 +120,7 @@ router.put('/', function(req, res) {
 router.delete('/', function(req, res) {
     const { id } = req.query;
     const sql = `
-        DELETE FROM productos_compra 
+        DELETE FROM producto_compra 
         WHERE id = ?
     `;
 

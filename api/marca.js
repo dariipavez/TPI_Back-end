@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { conexion } = require('../db/conexion');
-
+//terminado
 router.post('/', function(req, res, next){
     const { nombre } = req.body;
     const sql = "INSERT INTO marca (nombre) VALUES (?)";
