@@ -1,5 +1,5 @@
 const router=require('express').Router();
-const{ verificarToken }=require('@damianegreco/hashpass')
+const{ verificarToken }=require('@damianegreco/hashpass').verificarToken
 
 const TOKEN_SECRET = '46087388'
 
@@ -30,29 +30,23 @@ function verificarRol(req, res, next){
 
 //importar cada recurso de la API
 const usuarioRouter=require('./usuario');
-const marcaRouter=require('./marca');
-const talleRouter=require('./talle');
-const categoriaRouter=require('./categoria');
 const envioRouter=require('./envio');
-const metodo_pagoRouter=require('./metodo_pago');
-const productoRouter=require('./producto');
 const producto_compraRouter=require('./producto_compra')
 const compraRouter=require('./compra')
 
-const rutasAdminRouter=require('./rutasAdmin', )
+const rutasAdminRouter=require('./rutasAdmin' )
+const rutasPublicRouter=require('./rutasPublic')
+const rutasUsuarioRouter=require('./rutasUsuario')
 //redirigir a los recursos segun la ruta
 router.use('/usuario', usuarioRouter);
-router.use('/marca', marcaRouter);
-router.use('/talle', talleRouter);
-router.use('/metodo_pago', metodo_pagoRouter);
 
 //primero la verificacion, le sigue la ruta a la que se quiere acceder
 router.use('/rutasAdmin', verificarRol, rutasAdminRouter)
-    
+router.use('/rutasUsuario',verificarRol, rutasUsuarioRouter)
+router.use('/rutasPublic',rutasPublicRouter)
 
-//modificar, es para acceder utilizando el token para verificar.
+
 router.use('/envio', envioRouter);
-router.use('/producto',productoRouter)
 router.use('/producto_compra', producto_compraRouter)
 router.use('/compra', compraRouter)
 module.exports=router;
