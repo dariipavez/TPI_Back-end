@@ -63,8 +63,8 @@ function saveImage(file, nombreProducto) {
 }
 
 
-router.use(rutasPublic)
-router.use(rutasUsuario)
+router.use(rutasPublic);
+router.use(rutasUsuario);
 
 router.post('/registrar/producto', upload.array('imagenes', 4), function(req, res) {
     const { nombre, precio, stock, id_tipo_producto, id_marca, id_talle } = req.body;
@@ -418,20 +418,6 @@ router.post('/registrar/talle', function(req, res, next) {
                 res.json({
                     status:"ok",
                     message: "La categoria fue eliminada correctamente"
-                });
-            });
-        });
-
-    router.delete('/usuario/:id', function(req, res, next){
-            const id=req.params.id;
-            const sql="DELETE FROM usuario WHERE id=?"
-            conexion.query(sql,[id],function(error){
-                if(error){
-                    console.error(error);
-                    return res.status(500).send("ocurrió un error");
-                }
-                res.json({
-                    status:"ok"
                 });
             });
         });
