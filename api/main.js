@@ -1,41 +1,45 @@
 const router=require('express').Router();
-//const{ verificarToken }=require('@damianegreco/hashpass')
+const{ verificarToken }=require('@damianegreco/hashpass')
 
 const TOKEN_SECRET = '47355966'
 
-//importar cada recurso de la API
-const usuariosRouter=require('./usuarios');
-const productosRouter=require('./productos');
-const marcaRouter=require('./marca');
-const talleRouter=require('./talle');
-const categoriaRouter=require('./categoria');
-const envioRouter=require('./envio');
-const metodo_de_pagoRouter=require('./metodo_pago');
-const compraRouter=require('./compra');
-const productos_compraRouter=require('./productos_compra')
+//terminar las rutas y seleccionar que rutas estan permitidas para el usuario
+function rutasUsuario(req) {
+    const rutasPermitidas = [
+            './rutasUsuario'
 
-//redirigir a los recursos segun la ruta
-router.use('/usuarios', usuariosRouter);
-router.use('/productos', productosRouter);
-router.use('/marca', marcaRouter);
-router.use('/talle', talleRouter);
-router.use('/categoria', categoriaRouter);
-router.use('/envio', envioRouter);
-router.use('/metodo_pago', metodo_de_pagoRouter);
-router.use('/compra', compraRouter);
-router.use('/productos_compra', productos_compraRouter);
+];
+    return rutasPermitidas.includes(req.path);
+}
 
-//primero la verificacion, le sigue la ruta a la que se quiere acceder
-router.use('/productos', function(req,res,next){
+function verificarRol(req, res, next){
     const token=req.headers.authorization;
     const verificacion= verificarToken(token, TOKEN_SECRET);
     if(verificacion?.data!==undefined){
-        next()
-    }else{
+        req.user=verificacion.data;
+        const { rol } = verificacion.data;
+        if (rol === 'administrador' || (rol === 'usuario' && rutasUsuario(req))) {
+            next();
+        } else {
+            res.status(403).json({ status: 'error', error: 'Acceso restringido' });
+        }
+    } else {
         console.error(verificacion);
-        res.status(403).json({status:'error',error:verificacion});
+        res.status(403).json({ status: 'error', error: verificacion });
     }
-})
-//modificar, es para acceder utilizando el token para verificar.
+};
+
+//importar cada recurso de la API
+const usuarioRouter=require('./usuario');
+const rutasAdminRouter=require('./rutasAdmin' )
+const rutasPublicRouter=require('./rutasPublic')
+const rutasUsuarioRouter=require('./rutasUsuario')
+//redirigir a los recursos segun la ruta
+
+//primero la verificacion, le sigue la ruta a la que se quiere acceder
+router.use('/rutasAdmin', verificarRol, rutasAdminRouter)
+router.use('/rutasUsuario',verificarRol, rutasUsuarioRouter);
+router.use('/rutasPublic',rutasPublicRouter);
+router.use('/usuario', usuarioRouter);
 
 module.exports=router;
