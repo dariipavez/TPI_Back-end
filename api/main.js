@@ -1,5 +1,5 @@
 const router=require('express').Router();
-const{ verificarToken }=require('@damianegreco/hashpass').verificarToken
+const{ verificarToken }=require('@damianegreco/hashpass')
 
 const TOKEN_SECRET = '46087388'
 
