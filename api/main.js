@@ -1,7 +1,7 @@
 const router=require('express').Router();
 const{ verificarToken }=require('@damianegreco/hashpass')
 
-const TOKEN_SECRET = '47355966'
+const TOKEN_SECRET = '47355966';
 
 //terminar las rutas y seleccionar que rutas estan permitidas para el usuario
 function rutasUsuario(req) {

@@ -15,8 +15,6 @@ const verificarAdmin = (req, res, next) => {
     }
 };
 
-
-
 const checkUser=function(nombre_usuario){
     return new Promise((resolve, reject) => {
         const sql = 'SELECT id FROM usuario where nombre_usuario= ?';
@@ -29,7 +27,6 @@ const checkUser=function(nombre_usuario){
 }
 
 //tablas siempre en minuscula, al unir palabras con guion bajo
-
 const guardarUsuario=function(nombre_usuario,contraseñaHash, nombre_completo, fecha_nac, mail, rol,telefono){
     return new Promise ((resolve,reject)=>{
         const sql = "INSERT INTO usuario (nombre_completo, fecha_nac, mail, nombre_usuario, rol, contraseña,telefono) VALUES (?,?,?,?,?,?,?)";
@@ -65,7 +62,6 @@ router.post('/registrarse',function(req,res,next){
     });
 })
 
-    
 router.post("/login", function(req, res, next) {
     const { nombre_usuario, contraseña } = req.body;
 
@@ -92,7 +88,6 @@ router.post("/login", function(req, res, next) {
         }
     });
 });
-
 
 router.put('/actualizar/:id', function(req, res) {
     const id = req.params.id;
@@ -141,8 +136,6 @@ router.put('/actualizar/:id', function(req, res) {
     });
 });
 
-
-
 router.delete('/eliminar/:id',verificarAdmin, function(req, res, next){
     const id=req.params.id;
     const sql="DELETE FROM usuario WHERE id=?"
@@ -157,10 +150,8 @@ router.delete('/eliminar/:id',verificarAdmin, function(req, res, next){
     });
 });
 
-
 //obtener de la db la contraseña del usuario(si es q existe)
     //comparamos la contraseña recibida con la hasheada
-
     router.post('/crear', verificarAdmin, function(req, res) {
         const { nombre_usuario, contraseña, nombre_completo, fecha_nac, mail, rol, telefono } = req.body;
     
@@ -192,7 +183,6 @@ router.delete('/eliminar/:id',verificarAdmin, function(req, res, next){
             });
     });
     
-
     router.delete('/eliminar/:id',verificarAdmin, function(req, res, next){
         const id=req.params.id;
         const sql="DELETE FROM usuario WHERE id=?"

@@ -22,7 +22,7 @@ router.get('/ver/metodos_pago/:id?', function(req, res, next) {
 
 router.get('/ver/producto_compra/:id?', function(req, res) {
     const { id } = req.params;
-    const sql = id ? "SELECT * FROM productos_compra WHERE id=?" : "SELECT * FROM productos_compra";
+    const sql = id ? "SELECT * FROM producto_compra WHERE id=?" : "SELECT * FROM producto_compra";
 
     conexion.query(sql, id ? [id] : [], function(error, result) {
         if (error) {
@@ -32,7 +32,7 @@ router.get('/ver/producto_compra/:id?', function(req, res) {
 
         res.json({
             status: "ok",
-            productos_compra: result
+            producto_compra: result
         });
     });
 });

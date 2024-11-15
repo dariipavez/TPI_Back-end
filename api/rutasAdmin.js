@@ -145,15 +145,15 @@ router.post('/registrar/producto_compra', function(req, res) {
         return res.status(400).json({ error: 'Todos los campos son requeridos' });
     }
 
-    const sql_insert_productos_compra = `
-        INSERT INTO productos_compra (id_producto, id_compra, cantidad, precio_unitario) 
+    const sql_insert_producto_compra = `
+        INSERT INTO producto_compra (id_producto, id_compra, cantidad, precio_unitario) 
         VALUES (?, ?, ?, ?)
     `;
 
-    conexion.query(sql_insert_productos_compra, [id_producto, id_compra, cantidad, precio_unitario], function(error, result) {
+    conexion.query(sql_insert_producto_compra, [id_producto, id_compra, cantidad, precio_unitario], function(error, result) {
         if (error) {
-            console.error(error);
-            return res.status(500).send({ error: 'Error al insertar el registro de productos_compra' });
+            console.error('Error al insertar el registro en producto_compra:', error.code, error.sqlMessage);
+            return res.status(500).send({ error: 'Error al insertar el registro de producto_compra: ' + error.sqlMessage });
         }
 
         const sql_update_stock = `
@@ -164,7 +164,8 @@ router.post('/registrar/producto_compra', function(req, res) {
 
         conexion.query(sql_update_stock, [cantidad, id_producto], function(error, updateResult) {
             if (error) {
-                console.error(error);
+                // Si ocurre un error, lo mostramos de manera detallada
+                console.error('Error al actualizar el stock:', error.code, error.sqlMessage);
                 return res.status(500).send({ error: 'Error al actualizar el stock del producto' });
             }
 
@@ -181,18 +182,6 @@ router.post('/registrar/producto_compra', function(req, res) {
 router.post('/registrar/compra', function(req, res, next) {
     const { id_metodo_pago, precio_total, id_envio } = req.body;
 
-    conexion.query(sql_verificacion, [id_envio, id_metodo_pago], function(error, result) {
-        if (error) {
-            console.error(error);
-            return res.status(500).send("Ocurrió un error al verificar los IDs");
-        }
-
-        if (result.length === 0) {
-            return res.status(404).json({
-                status: "error",
-                mensaje: "El id_metodo_pago o id_envio no existen"
-            });
-        }
 
         const sql_insert_compra = "INSERT INTO compra (id_metodo_pago, precio_total, id_envio) VALUES (?, ?, ?)";
 
@@ -208,7 +197,6 @@ router.post('/registrar/compra', function(req, res, next) {
             });
         });
     });
-});
 
 router.post('/registrar/categoria', function(req, res, next){
     const {nombre}=req.body;
@@ -332,40 +320,35 @@ router.post('/registrar/talle', function(req, res, next) {
         });
 
         router.put('/actualizar/compra/:id', function(req, res) {
-            const { id } = req.query;
-            const campos = req.body;
+            const { id } = req.params;
+            const { id_metodo_pago, precio_total, id_envio } = req.body;
         
-            if (!id) {
-                return res.status(400).json({ error: 'Se necesita el id de la compra' });
-            }
+            const sql_update_compra = `
+                UPDATE compra 
+                SET id_metodo_pago = ?, precio_total = ?, id_envio = ? 
+                WHERE id = ?
+            `;
         
-            const sql_verificar_compra = 'SELECT * FROM compra WHERE id = ?';
-            conexion.query(sql_verificar_compra, [id], function(error, results) {
+            conexion.query(sql_update_compra, [id_metodo_pago, precio_total, id_envio, id], function(error, result) {
                 if (error) {
-                    console.error(error);
-                    return res.status(500).json({ error: 'Error al verificar la compra' });
+                    console.error("Error al ejecutar la consulta:", error.sqlMessage);
+                    return res.status(500).send("Error al actualizar la compra");
                 }
         
-                if (results.length === 0) {
-                    return res.status(404).json({ error: 'Compra no encontrada' });
+                if (result.affectedRows === 0) {
+                    return res.status(404).json({
+                        status: "error",
+                        mensaje: "Compra no encontrada o no actualizada"
+                    });
                 }
         
-                const sql_actualizar_compra = 'UPDATE compra SET ? WHERE id = ?';
-                conexion.query(sql_actualizar_compra, [campos, id], function(error, result) {
-                    if (error) {
-                        console.error(error);
-                        return res.status(500).json({ error: 'Error al actualizar la compra' });
-                    }
-        
-                    if (result.affectedRows === 0) {
-                        return res.status(404).json({ error: 'No se encontró la compra para actualizar' });
-                    }
-        
-                    res.json({ status: 'ok', mensaje: 'Compra actualizada correctamente' });
+                res.json({
+                    status: "ok",
+                    mensaje: "Compra actualizada correctamente"
                 });
             });
         });
-
+        
         router.put('/actualizar/producto_compra/:id', function(req, res) {
             const { id_producto, id_compra, cantidad, precio_unitario } = req.body;
             const { id } = req.params;
@@ -375,7 +358,7 @@ router.post('/registrar/talle', function(req, res, next) {
             }
         
             const sql = `
-                UPDATE productos_compra 
+                UPDATE producto_compra 
                 SET id_producto = ?, id_compra = ?, cantidad = ?, precio_unitario = ? 
                 WHERE id = ?
             `;
@@ -386,15 +369,21 @@ router.post('/registrar/talle', function(req, res, next) {
                     return res.status(500).send(error);
                 }
         
+                if (result.affectedRows === 0) {
+                    return res.status(404).json({
+                        status: "error",
+                        mensaje: "Producto compra no encontrado o no actualizado"
+                    });
+                }
+        
                 res.json({
                     status: 'ok',
                     mensaje: 'Producto compra actualizado correctamente',
                     affectedRows: result.affectedRows
                 });
             });
-        });
+        });        
         
-
         router.put('/actualizar/envio/:id', function(req, res, next) {
             const { id } = req.params;
             const { id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional } = req.body;
@@ -665,6 +654,7 @@ router.post('/registrar/talle', function(req, res, next) {
                 });
             });
         });
+        
     router.delete('/eliminar/categoria/:id', function(req, res, next){
         const {id}=req.params;
         const sql="DELETE FROM categoria WHERE id=?"
