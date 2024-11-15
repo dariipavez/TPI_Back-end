@@ -1,9 +1,6 @@
 const router = require('express').Router();
 const { conexion } = require('../db/conexion');
 
-
-
-
 router.get('/ver/talle/:id?', function(req, res, next) {
     const id = req.params.id;
     const sql = id ? "SELECT * FROM talle WHERE id=?" : "SELECT * FROM talle";
