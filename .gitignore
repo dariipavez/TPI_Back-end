@@ -6,3 +6,4 @@ logs
 
 *.log
 /uploads
+/api/uploads
