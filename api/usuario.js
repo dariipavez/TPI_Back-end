@@ -96,9 +96,40 @@ router.post("/login",function(req,res,next){
     })
 })
 
-router.put('/actualizar/:id', function(req, res) {
+router.post('/verificar/datos', (req, res) => {
+    const { mail, nombre_completo, telefono } = req.body;
+
+    const query = `SELECT id FROM usuario WHERE mail = ? AND nombre_completo = ? AND telefono = ?`;
+    
+    conexion.query(query, [mail, nombre_completo, telefono], (error, results) => {
+      if (error) {
+        console.error('Error de base de datos:', error);
+        return res.status(500).json({ 
+          status: 'error', 
+          message: 'Error en la base de datos', 
+          error: error.message 
+        });
+      }
+  
+      if (results.length > 0) {
+        return res.status(200).json({ 
+          status: 'ok', 
+          usuario_id: results[0].id 
+        });
+      } else {
+        return res.status(404).json({ 
+          status: 'error', 
+          message: 'Datos incorrectos' 
+        });
+      }
+    });
+  });
+  
+
+
+  router.put('/actualizar/:id', function(req, res) {
     const id = req.params.id;
-    const { nombre_usuario, contraseña, nombre_completo, fecha_nac, mail, rol, telefono } = req.body;
+    const { nombre_usuario, contraseña, nombre_completo, fecha_nac, mail, rol, telefono, nueva_contraseña } = req.body;
 
     if (!id) {
         return res.status(400).json({ error: 'Se necesita el id del usuario' });
@@ -106,42 +137,90 @@ router.put('/actualizar/:id', function(req, res) {
 
     const token = req.headers.authorization;
     const verificacion = verificarToken(token, TOKEN_SECRET);
+    // Verificar si se está actualizando la contraseña
+    if (nueva_contraseña) {
+        // Si se está actualizando la contraseña, procesamos esta parte
+        const nuevaContraseñaHashed = hashPass(nueva_contraseña);
 
-    if (!verificacion?.data) {
-        return res.status(403).json({ status: 'error', error: 'Acceso restringido' });
-    }
+        // Actualizar la contraseña en la base de datos
+        const sql = "UPDATE usuario SET contraseña = ? WHERE id = ?";
+        conexion.query(sql, [nuevaContraseñaHashed, id], function(error, result) {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Error al actualizar la contraseña' });
+            }
 
-    const usuarioLogeado = verificacion.data;
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ error: 'No se encontró el usuario para actualizar la contraseña' });
+            }
 
-    if (usuarioLogeado.rol !== 'administrador' && usuarioLogeado.usuario_id !== parseInt(id)) {
-        return res.status(403).json({ status: 'error', error: 'No tienes permisos para actualizar este usuario' });
-    }
+            return res.json({ status: 'ok', mensaje: 'Contraseña actualizada correctamente' });
+        });
+    } else {
+        // Si no se está actualizando la contraseña, actualizamos los demás datos
+        const actualizarContraseña = contraseña;
 
-    const campos = {
-        ...(nombre_usuario !== undefined && { nombre_usuario }),
-        ...(nombre_completo !==undefined && { nombre_completo }),
-        ...(fecha_nac !== undefined && { fecha_nac }),
-        ...(mail !==undefined && { mail }),
-        ...(telefono !== undefined && { telefono }),
-        ...(contraseña && { contraseña: hashPass(contraseña) })
-    };
-    if (usuarioLogeado.rol === 'administrador' && rol !== undefined){ 
-        campos.rol = rol.toLowerCase();
-    }
-    const sql = "UPDATE usuario SET ? WHERE id = ?";
-    conexion.query(sql, [campos, id], function(error, result) {
-        if (error) {
-            console.error(error);
-            return res.status(500).json({ error: 'Error al actualizar el usuario' });
+        // Si no se está actualizando la contraseña, necesitamos un token
+        if (!actualizarContraseña) {
+            const token = req.headers.authorization;
+
+            if (!token) {
+                return res.status(401).json({ status: "error", error: "No se identificó un token" });
+            }
+
+            const verificacion = verificarToken(token, TOKEN_SECRET);
+
+            if (!verificacion?.data) {
+                return res.status(403).json({ status: 'error', error: 'Acceso restringido' });
+            }
+
+            const usuarioLogeado = verificacion.data;
+
+            // Solo el usuario logeado o un administrador puede actualizar su propio usuario
+            if (usuarioLogeado.usuario_id !== parseInt(id) && usuarioLogeado.rol !== 'administrador') {
+                return res.status(403).json({ status: 'error', error: 'No tienes permisos para actualizar este usuario' });
+            }
         }
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'No se encontró el usuario para actualizar' });
+        // Creación del objeto campos con las actualizaciones
+        const campos = {
+            ...(nombre_usuario !== undefined && { nombre_usuario }),
+            ...(nombre_completo !== undefined && { nombre_completo }),
+            ...(fecha_nac !== undefined && { fecha_nac }),
+            ...(mail !== undefined && { mail }),
+            ...(telefono !== undefined && { telefono }),
+            ...(contraseña && { contraseña: hashPass(contraseña) })
+        };
+
+        // Solo los administradores pueden cambiar el rol
+        if (rol !== undefined) {
+            const usuarioLogeado = verificacion?.data;
+            if (usuarioLogeado?.rol === 'administrador') {
+                campos.rol = rol.toLowerCase();
+            } else {
+                return res.status(403).json({ status: 'error', error: 'No tienes permisos para modificar el rol' });
+            }
         }
 
-        res.json({ status: 'ok', mensaje: 'Usuario actualizado correctamente' });
-    });
+        // Consulta para actualizar el usuario
+        const sql = "UPDATE usuario SET ? WHERE id = ?";
+        conexion.query(sql, [campos, id], function(error, result) {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Error al actualizar el usuario' });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ error: 'No se encontró el usuario para actualizar' });
+            }
+
+            res.json({ status: 'ok', mensaje: 'Usuario actualizado correctamente' });
+        });
+    }
 });
+
+
+
 
 
 
