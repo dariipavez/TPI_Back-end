@@ -17,24 +17,34 @@ router.get('/ver/talle/:id?', function(req, res, next) {
     });
 });
 
-router.get("/ver/producto/:id?", function(req, res, next){
+router.get("/ver/producto/:id?", function(req, res, next) {
     const id = req.params.id;
-    const { page = 1, limit = 10 } = req.query;
-    const offset = (page - 1) * limit;
+    const { pagina = 1, limite = 10 } = req.query;
+    const offset = (pagina - 1) * limite;
 
     let sql;
     let queryParams = [];
 
     if (id) {
-        sql = "SELECT * FROM producto WHERE id = ?";
+        sql = `
+            SELECT producto.*, producto_imagen.ruta_imagen
+            FROM producto
+            LEFT JOIN producto_imagen ON producto.id = producto_imagen.id_producto
+            WHERE producto.id = ?
+            LIMIT 1`;
         queryParams = [id];
     } else {
-        sql = "SELECT * FROM producto LIMIT ? OFFSET ?";
-        queryParams = [parseInt(limit), offset];
+        sql = `
+            SELECT producto.*, MIN(producto_imagen.ruta_imagen) AS ruta_imagen
+            FROM producto
+            LEFT JOIN producto_imagen ON producto.id = producto_imagen.id_producto
+            GROUP BY producto.id
+            LIMIT ? OFFSET ?`;
+        queryParams = [parseInt(limite), offset];
     }
 
-    conexion.query(sql, queryParams, function(error, result){
-        if(error){
+    conexion.query(sql, queryParams, function(error, result) {
+        if (error) {
             console.error(error);
             return res.status(500).send(error);
         }
@@ -42,20 +52,23 @@ router.get("/ver/producto/:id?", function(req, res, next){
         if (id) {
             res.json({
                 status: "ok",
-                producto: result
+                producto: result[0],  // Aseguramos que solo se envíe un producto
             });
         } else {
             res.json({
                 status: "ok",
-                productos: result
+                productos: result,
             });
         }
     });
 });
 
+
+
+
 router.get("/ver/producto/buscar", function(req, res, next){
-    const { nombre, page = 1, limit = 10 } = req.query;
-    const offset = (page - 1) * limit;
+    const { nombre, pagina = 1, limite = 10 } = req.query;
+    const offset = (pagina - 1) * limite;
 
     if (!nombre) {
         return res.status(400).json({
@@ -65,9 +78,9 @@ router.get("/ver/producto/buscar", function(req, res, next){
     }
 
     const sql = "SELECT * FROM producto WHERE nombre LIKE ? LIMIT ? OFFSET ?";
-    const queryParams = [`%${nombre}%`, parseInt(limit), offset];
+    const paramsQuery = [`%${nombre}%`, parseInt(limite), offset];
 
-    conexion.query(sql, queryParams, function(error, result) {
+    conexion.query(sql, paramsQuery, function(error, result) {
         if (error) {
             console.error(error);
             return res.status(500).send(error);
@@ -91,8 +104,8 @@ router.get("/ver/producto/buscar", function(req, res, next){
 
 router.get("/ver/producto/categoria/:id_categoria", function (req, res) {
     const id_categoria = req.params.id_categoria;
-    const { page = 1, limit = 10 } = req.query;
-    const offset = (page - 1) * limit;
+    const { pagina = 1, limite = 10 } = req.query;
+    const offset = (pagina - 1) * limite;
 
     if (!id_categoria) {
         return res.status(400).json({
@@ -109,7 +122,7 @@ router.get("/ver/producto/categoria/:id_categoria", function (req, res) {
         LIMIT ? OFFSET ?
     `;
 
-    conexion.query(sql, [id_categoria, parseInt(limit), offset], function (error, results) {
+    conexion.query(sql, [id_categoria, parseInt(limite), offset], function (error, results) {
         if (error) {
             console.error(error);
             return res.status(500).json({ error: "Error al obtener los productos" });

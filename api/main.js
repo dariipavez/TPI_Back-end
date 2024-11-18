@@ -9,7 +9,8 @@ function rutasUsuario(req) { const rutasPermitidas = [
 '/rutasUsuario/ver/metodos_pago/:id?',
 '/rutasUsuario/ver/producto_compra/:id?',
 '/rutasUsuario/ver/envio/:id?',
-'/rutasUsuario/ver/compra/:id?'
+'/rutasUsuario/ver/compra/:id?',
+'/rutasUsuario/ver/usuario'
 ]
 const rutaBase = req.path.split('?')[0].split('/')[1];
 return rutasPermitidas.some(ruta => ruta.includes(rutaBase));
