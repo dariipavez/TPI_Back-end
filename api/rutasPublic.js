@@ -30,8 +30,7 @@ router.get("/ver/producto/:id?", function(req, res, next) {
             SELECT producto.*, producto_imagen.ruta_imagen
             FROM producto
             LEFT JOIN producto_imagen ON producto.id = producto_imagen.id_producto
-            WHERE producto.id = ?
-            LIMIT 1`;
+            WHERE producto.id = ?`;
         queryParams = [id];
     } else {
         sql = `
@@ -43,21 +42,29 @@ router.get("/ver/producto/:id?", function(req, res, next) {
         queryParams = [parseInt(limite), offset];
     }
 
-    conexion.query(sql, queryParams, function(error, result) {
+    conexion.query(sql, queryParams, function(error, results) {
         if (error) {
             console.error(error);
             return res.status(500).send(error);
         }
 
         if (id) {
+            if (results.length === 0) {
+                return res.status(404).json({ error: "Producto no encontrado" });
+            }
+
+            // Agrupar imágenes del producto
+            const producto = results[0];
+            producto.imagenes = results.map(row => row.ruta_imagen);
+
             res.json({
                 status: "ok",
-                producto: result[0],  // Aseguramos que solo se envíe un producto
+                producto: producto,
             });
         } else {
             res.json({
                 status: "ok",
-                productos: result,
+                productos: results,
             });
         }
     });
@@ -110,15 +117,17 @@ router.get("/ver/producto/categoria/:id_categoria", function (req, res) {
     if (!id_categoria) {
         return res.status(400).json({
             status: "error",
-            mensaje: "El id de la categoria es obligatorio"
+            mensaje: "El id de la categoría es obligatorio"
         });
     }
 
     const sql = `
-        SELECT producto.* 
+        SELECT producto.*, MIN(producto_imagen.ruta_imagen) AS ruta_imagen 
         FROM producto 
         JOIN tipo_producto ON producto.id_tipo_producto = tipo_producto.id 
+        LEFT JOIN producto_imagen ON producto.id = producto_imagen.id_producto
         WHERE tipo_producto.id_categoria = ? 
+        GROUP BY producto.id
         LIMIT ? OFFSET ?
     `;
 
@@ -141,6 +150,8 @@ router.get("/ver/producto/categoria/:id_categoria", function (req, res) {
         });
     });
 });
+
+
 
 
 router.get("/ver/producto/tipo_producto/:id_tipo_producto", function (req, res) {
