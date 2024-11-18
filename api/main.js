@@ -6,6 +6,7 @@ const TOKEN_SECRET = '46087388'
 //terminar las rutas y seleccionar que rutas estan permitidas para el usuario
 function rutasUsuario(req) { const rutasPermitidas = [ 
 
+
     '/rutasUsuario/ver/perfil/:id',
     '/rutasUsuario/ver/metodos_pago/:id?',
     '/rutasUsuario/ver/producto_compra/:id?',
