@@ -72,7 +72,7 @@ router.post("/login",function(req,res,next){
     const {nombre_usuario,contraseña}=req.body;
 
 
-    const sql='SELECT id,nombre_usuario,contraseña,rol FROM usuario WHERE nombre_usuario= ?'
+    const sql='SELECT id, nombre_usuario,contraseña,rol FROM usuario WHERE nombre_usuario= ?'
     conexion.query(sql,[nombre_usuario], function(error,result){
         if(error){
             console.error(error);
@@ -86,8 +86,10 @@ router.post("/login",function(req,res,next){
         if (verificarPass(contraseña, result[0].contraseña)) {
             console.log('Inicio Correctamente');
             const token = generarToken(TOKEN_SECRET, 6, { usuario_id: result[0].id, usuario: nombre_usuario, rol: result[0].rol });
+
             console.log(token);
             return res.json({ status: 'ok', token, usuario_id: result[0].id ,rol: result[0].rol });
+
         } else {
             console.error('Usuario/Contraseña incorrecto');
             return res.status(403).json({ status: 'error', error: 'Usuario/Contraseña incorrecto' });
@@ -135,11 +137,12 @@ router.post('/verificar/datos', (req, res) => {
         return res.status(400).json({ error: 'Se necesita el id del usuario' });
     }
 
+
     const token = req.headers.authorization;
     const verificacion = verificarToken(token, TOKEN_SECRET);
     // Verificar si se está actualizando la contraseña
+
     if (nueva_contraseña) {
-        // Si se está actualizando la contraseña, procesamos esta parte
         const nuevaContraseñaHashed = hashPass(nueva_contraseña);
 
         // Actualizar la contraseña en la base de datos
@@ -157,10 +160,8 @@ router.post('/verificar/datos', (req, res) => {
             return res.json({ status: 'ok', mensaje: 'Contraseña actualizada correctamente' });
         });
     } else {
-        // Si no se está actualizando la contraseña, actualizamos los demás datos
         const actualizarContraseña = contraseña;
 
-        // Si no se está actualizando la contraseña, necesitamos un token
         if (!actualizarContraseña) {
             const token = req.headers.authorization;
 
@@ -176,13 +177,11 @@ router.post('/verificar/datos', (req, res) => {
 
             const usuarioLogeado = verificacion.data;
 
-            // Solo el usuario logeado o un administrador puede actualizar su propio usuario
             if (usuarioLogeado.usuario_id !== parseInt(id) && usuarioLogeado.rol !== 'administrador') {
                 return res.status(403).json({ status: 'error', error: 'No tienes permisos para actualizar este usuario' });
             }
         }
 
-        // Creación del objeto campos con las actualizaciones
         const campos = {
             ...(nombre_usuario !== undefined && { nombre_usuario }),
             ...(nombre_completo !== undefined && { nombre_completo }),
@@ -192,7 +191,6 @@ router.post('/verificar/datos', (req, res) => {
             ...(contraseña && { contraseña: hashPass(contraseña) })
         };
 
-        // Solo los administradores pueden cambiar el rol
         if (rol !== undefined) {
             const usuarioLogeado = verificacion?.data;
             if (usuarioLogeado?.rol === 'administrador') {
@@ -202,7 +200,6 @@ router.post('/verificar/datos', (req, res) => {
             }
         }
 
-        // Consulta para actualizar el usuario
         const sql = "UPDATE usuario SET ? WHERE id = ?";
         conexion.query(sql, [campos, id], function(error, result) {
             if (error) {
