@@ -11,7 +11,13 @@ app.get('/',function(req,res,next){
 
 
 })
-app.use(cors());
+
+app.use(cors({
+  origin: 'http://localhost:5173', // Dirección del frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'] // Permitir el header 'Authorization'
+}));
+
 
 app.use('/api', apiRouter)
 

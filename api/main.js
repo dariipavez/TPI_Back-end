@@ -4,12 +4,15 @@ const{ verificarToken }=require('@damianegreco/hashpass')
 const TOKEN_SECRET = '46087388'
 
 //terminar las rutas y seleccionar que rutas estan permitidas para el usuario
-function rutasUsuario(req) {
-    const rutasPermitidas = [
-            './rutasUsuario'
-
-];
-    return rutasPermitidas.includes(req.path);
+function rutasUsuario(req) { const rutasPermitidas = [ 
+'/rutasUsuario/ver/perfil/:id',
+'/rutasUsuario/ver/metodos_pago/:id?',
+'/rutasUsuario/ver/producto_compra/:id?',
+'/rutasUsuario/ver/envio/:id?',
+'/rutasUsuario/ver/compra/:id?'
+]
+const rutaBase = req.path.split('?')[0].split('/')[1];
+return rutasPermitidas.some(ruta => ruta.includes(rutaBase));
 }
 
 function verificarRol(req, res, next){
