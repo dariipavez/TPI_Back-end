@@ -27,16 +27,14 @@ router.get("/ver/producto/:id?", function(req, res, next) {
 
     if (id) {
         sql = `
-            SELECT producto.*, producto_imagen.ruta_imagen
+            SELECT producto.*
             FROM producto
-            LEFT JOIN producto_imagen ON producto.id = producto_imagen.id_producto
             WHERE producto.id = ?`;
         queryParams = [id];
     } else {
         sql = `
-            SELECT producto.*, MIN(producto_imagen.ruta_imagen) AS ruta_imagen
+            SELECT producto.*
             FROM producto
-            LEFT JOIN producto_imagen ON producto.id = producto_imagen.id_producto
             GROUP BY producto.id
             LIMIT ? OFFSET ?`;
         queryParams = [parseInt(limite), offset];
