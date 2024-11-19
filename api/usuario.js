@@ -87,7 +87,7 @@ router.post("/login",function(req,res,next){
             console.log('Inicio Correctamente');
             const token = generarToken(TOKEN_SECRET, 6, { usuario_id: result[0].id, usuario: nombre_usuario, rol: result[0].rol });
             console.log(token);
-            return res.json({ status: 'ok', token });
+            return res.json({ status: 'ok', token, usuario_id: result[0].id ,rol: result[0].rol });
         } else {
             console.error('Usuario/Contraseña incorrecto');
             return res.status(403).json({ status: 'error', error: 'Usuario/Contraseña incorrecto' });

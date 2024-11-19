@@ -5,6 +5,8 @@ const rutasPublic=require('./rutasPublic')
 
 router.use(rutasPublic);
 
+
+
 router.get('/ver/metodos_pago/:id?', function(req, res, next) {
     const { id } = req.params;
     const sql = id ? "SELECT * FROM metodo_pago WHERE id=?" : "SELECT * FROM metodo_pago";

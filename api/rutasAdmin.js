@@ -370,7 +370,21 @@ router.post('/registrar/talle', function(req, res, next) {
                 });
             });
         });
-        
+        router.get('/ver/usuario', function (req, res) {
+            const sql = "SELECT id, nombre_completo, mail, fecha_nac, nombre_usuario, telefono FROM usuario";
+            
+            conexion.query(sql, function (error, results) {
+                if (error) {
+                    console.error(error);
+                    return res.status(500).json({ error: 'Error en la consulta' });
+                }
+                
+                res.json({
+                    status: 'ok',
+                    usuarios: results
+                });
+            });
+        });
         router.put('/actualizar/producto_compra/:id', function(req, res) {
             const { id_producto, id_compra, cantidad, precio_unitario } = req.body;
             const { id } = req.params;
