@@ -1,5 +1,7 @@
 const router=require('express').Router()
+
 const {conexion}=require('../db/conexion')
+
 const{ hashPass, verificarPass, generarToken, verificarToken}=require('@damianegreco/hashpass')
 
 const TOKEN_SECRET = '47355966';
@@ -15,6 +17,8 @@ const verificarAdmin = (req, res, next) => {
     }
 };
 
+
+
 const checkUser=function(nombre_usuario){
     return new Promise((resolve, reject) => {
         const sql = 'SELECT id FROM usuario where nombre_usuario= ?';
@@ -27,6 +31,7 @@ const checkUser=function(nombre_usuario){
 }
 
 //tablas siempre en minuscula, al unir palabras con guion bajo
+
 const guardarUsuario=function(nombre_usuario,contraseñaHash, nombre_completo, fecha_nac, mail, rol,telefono){
     return new Promise ((resolve,reject)=>{
         const sql = "INSERT INTO usuario (nombre_completo, fecha_nac, mail, nombre_usuario, rol, contraseña,telefono) VALUES (?,?,?,?,?,?,?)";
@@ -62,32 +67,34 @@ router.post('/registrarse',function(req,res,next){
     });
 })
 
-router.post("/login", function(req, res, next) {
-    const { nombre_usuario, contraseña } = req.body;
+    
+router.post("/login",function(req,res,next){
+    const {nombre_usuario,contraseña}=req.body;
 
-    const sql = 'SELECT id, nombre_usuario, contraseña, rol FROM usuario WHERE nombre_usuario = ?';
-    conexion.query(sql, [nombre_usuario], function(error, result) {
-        if (error) {
+
+    const sql='SELECT id,nombre_usuario,contraseña,rol FROM usuario WHERE nombre_usuario= ?'
+    conexion.query(sql,[nombre_usuario], function(error,result){
+        if(error){
             console.error(error);
-            return res.status(500).json({ status: 'error', error });
+            res.status(500).json({status:'error',error})
         }
-
-        if (result.length === 0) {
-            console.error('Error al buscar usuario (Usuario Incorrecto)');
-            return res.status(403).json({ status: 'error', error: 'Error al buscar usuario (Usuario incorrecto)' });
+        if (result.length !== 1) {
+            console.error('Error al buscar usuario(Usuario Incorrecto)');
+            return res.status(403).json({ status: 'error', error: 'Error al buscar usuario(Usuario incorrecto)' });
         }
-
+        
         if (verificarPass(contraseña, result[0].contraseña)) {
             console.log('Inicio Correctamente');
             const token = generarToken(TOKEN_SECRET, 6, { usuario_id: result[0].id, usuario: nombre_usuario, rol: result[0].rol });
             console.log(token);
-            return res.json({ status: 'ok', token });
+            return res.json({ status: 'ok', token, usuario_id:result[0].id, rol:result[0].rol});
         } else {
             console.error('Usuario/Contraseña incorrecto');
             return res.status(403).json({ status: 'error', error: 'Usuario/Contraseña incorrecto' });
         }
-    });
-});
+        
+    })
+})
 
 router.put('/actualizar/:id', function(req, res) {
     const id = req.params.id;
@@ -136,6 +143,8 @@ router.put('/actualizar/:id', function(req, res) {
     });
 });
 
+
+
 router.delete('/eliminar/:id',verificarAdmin, function(req, res, next){
     const id=req.params.id;
     const sql="DELETE FROM usuario WHERE id=?"
@@ -150,8 +159,10 @@ router.delete('/eliminar/:id',verificarAdmin, function(req, res, next){
     });
 });
 
+
 //obtener de la db la contraseña del usuario(si es q existe)
     //comparamos la contraseña recibida con la hasheada
+
     router.post('/crear', verificarAdmin, function(req, res) {
         const { nombre_usuario, contraseña, nombre_completo, fecha_nac, mail, rol, telefono } = req.body;
     
@@ -183,6 +194,7 @@ router.delete('/eliminar/:id',verificarAdmin, function(req, res, next){
             });
     });
     
+
     router.delete('/eliminar/:id',verificarAdmin, function(req, res, next){
         const id=req.params.id;
         const sql="DELETE FROM usuario WHERE id=?"

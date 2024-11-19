@@ -31,10 +31,17 @@ function actualizarImagenes(idProducto, imagenes, res) {
         });
     });
 }
-const tempUploadsPath = path.join(__dirname, 'temp_uploads');
+
+const tempUploadsPath = path.join(__dirname, '/temp_uploads');
+const uploadsPath = path.join(__dirname, '/uploads');
+
 if (!fs.existsSync(tempUploadsPath)) {
     fs.mkdirSync(tempUploadsPath, { recursive: true });
 }
+if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, tempUploadsPath);
@@ -43,160 +50,94 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + path.extname(file.originalname));
     }
 });
+
 const upload = multer({ storage: storage });
 
 function limpiarArchivosTemporales(files) {
     files.forEach(file => {
-        fs.unlink(file.path, (err) => {
-            if (err) console.error(`Error al eliminar el archivo temporal ${file.path}:`, err);
-        });
+        if (fs.existsSync(file.path)) {
+            fs.unlink(file.path, (error) => {
+                if (error) console.error(`Error al eliminar el archivo temporal ${file.path}:`, error);
+            });
+        } else {
+            console.log(`El archivo temporal ${file.path} ya no existe.`);
+        }
     });
 }
 
-function saveImage(file, nombreProducto) {
+function saveImage(file, nombreProducto, callback) {
     const timestamp = Date.now();
     const extension = path.extname(file.originalname);
     const newFileName = `${nombreProducto}-${timestamp}${extension}`;
-    const newPath = `./uploads/${newFileName}`;
-    fs.renameSync(file.path, newPath);
-    return newPath;
+    const newPath = path.join(uploadsPath, newFileName);
+    fs.rename(file.path, newPath, (error) => {
+        if (error) {
+            return callback(error);
+        }
+        callback(null, newPath);
+    });
 }
 
+router.use(rutasPublic);
+router.use(rutasUsuario);
 
-
-router.use(rutasPublic)
-router.use(rutasUsuario)
-
-
-
-//Agregar
-router.post('/registrar/producto', upload.array('imagenes', 4), function(req, res) {
+router.post('/registrar/producto', upload.array('imagenes', 4), function (req, res) {
     const { nombre, precio, stock, id_tipo_producto, id_marca, id_talle } = req.body;
-
-    const nombreMin=nombre.toLowerCase();
+    const nombreMin = nombre.toLowerCase();
 
     if (!req.files || req.files.length === 0) {
         return res.status(400).send({ error: 'Debe incluir al menos una imagen para el producto' });
     }
+
     const sql_insert_producto = 
         "INSERT INTO producto (nombre, precio, stock, id_tipo_producto, id_marca, id_talle) VALUES (?, ?, ?, ?, ?, ?)";
-
+    
     conexion.query(sql_insert_producto, [nombreMin, precio, stock, id_tipo_producto, id_marca, id_talle], function(error, resultProducto) {
         if (error) {
-            console.error(error);
+            console.error('Error al insertar producto:', error);
             limpiarArchivosTemporales(req.files);
             return res.status(500).send({ error: 'Error al registrar el producto' });
         }
 
         const producto_id = resultProducto.insertId;
+        const valoresImagenes = [];
+        
+        req.files.forEach(file => {
+            saveImage(file, nombreMin, function(err, rutaImagen) {
+                if (err) {
+                    conexion.query("DELETE FROM producto WHERE id = ?", [producto_id], function() {
+                        limpiarArchivosTemporales(req.files);
+                        return res.status(500).send({ error: 'Error al mover las imágenes' });
+                    });
+                    return;
+                }
+                valoresImagenes.push([producto_id, rutaImagen]);
+                if (valoresImagenes.length === req.files.length) {
+                    const sql_insert_imagenes = "INSERT INTO producto_imagen (id_producto, ruta_imagen) VALUES ?";
+                    conexion.query(sql_insert_imagenes, [valoresImagenes], function(error) {
+                        if (error) {
+                            console.error('Error al insertar imágenes:', error);
+                            valoresImagenes.forEach(([_, rutaImagen]) => fs.unlinkSync(rutaImagen));
+                            conexion.query("DELETE FROM producto WHERE id = ?", [producto_id], function() {
+                                limpiarArchivosTemporales(req.files);
+                                return res.status(500).send({ error: 'Error al guardar las imágenes' });
+                            });
+                            return;
+                        }
 
-        const valoresImagenes = req.files.map(file => {
-            const rutaImagen = saveImage(file, nombre);
-            return [producto_id, rutaImagen];
-        });
+                        limpiarArchivosTemporales(req.files);
 
-        const sql_insert_imagenes = "INSERT INTO producto_imagen (id_producto, ruta_imagen) VALUES ?";
-
-        conexion.query(sql_insert_imagenes, [valoresImagenes], function(error) {
-            if (error) {
-                console.error(error);
-                limpiarArchivosTemporales(req.files);
-                return res.status(500).send({ error: 'Error al guardar las imágenes' });
-            }
-
-            res.json({
-                status: "ok",
-                mensaje: "Producto insertado correctamente con imágenes",
-                producto_id: producto_id
+                        res.json({
+                            status: "ok",
+                            mensaje: "Producto insertado correctamente con imágenes",
+                            producto_id: producto_id
+                        });
+                    });
+                }
             });
         });
     });
 });
-
-router.post('/registrar/envio', (req, res) => {
-    const { id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional } = req.body;
-
-    if (!id_usuario || !codigo_postal || !calle || !numero || !ciudad) {
-        return res.status(400).json({ error: 'Todos los campos son requeridos, excepto la información adicional' });
-    }
-
-    const sql_insert_envio = `
-        INSERT INTO envio (id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    `;
-    
-    conexion.query(sql_insert_envio, [id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional], (error, result) => {
-        if (error) {
-            console.error(error);
-            return res.status(500).json({ error: 'Error al crear el envío' });
-        }
-
-        res.json({
-            status: "ok",
-            id_envio: result.insertId
-        });
-    });
-});
-
-router.post('/registrar/producto_compra', function(req, res) {
-    const { id_producto, id_compra, cantidad, precio_unitario } = req.body;
-
-    if (!id_producto || !id_compra || !cantidad || !precio_unitario) {
-        return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    }
-
-    const sql_insert_producto_compra = `
-        INSERT INTO producto_compra (id_producto, id_compra, cantidad, precio_unitario) 
-        VALUES (?, ?, ?, ?)
-    `;
-
-    conexion.query(sql_insert_producto_compra, [id_producto, id_compra, cantidad, precio_unitario], function(error, result) {
-        if (error) {
-            console.error('Error al insertar el registro en producto_compra:', error.code, error.sqlMessage);
-            return res.status(500).send({ error: 'Error al insertar el registro de producto_compra: ' + error.sqlMessage });
-        }
-
-        const sql_update_stock = `
-            UPDATE producto 
-            SET stock = stock - ? 
-            WHERE id = ?
-        `;
-
-        conexion.query(sql_update_stock, [cantidad, id_producto], function(error, updateResult) {
-            if (error) {
-                // Si ocurre un error, lo mostramos de manera detallada
-                console.error('Error al actualizar el stock:', error.code, error.sqlMessage);
-                return res.status(500).send({ error: 'Error al actualizar el stock del producto' });
-            }
-
-            res.json({
-                status: 'ok',
-                id: result.insertId,
-                mensaje: 'Producto agregado a la compra y stock actualizado correctamente'
-            });
-        });
-    });
-});
-
-
-router.post('/registrar/compra', function(req, res, next) {
-    const { id_metodo_pago, precio_total, id_envio } = req.body;
-
-
-        const sql_insert_compra = "INSERT INTO compra (id_metodo_pago, precio_total, id_envio) VALUES (?, ?, ?)";
-
-        conexion.query(sql_insert_compra, [id_metodo_pago, precio_total, id_envio], function(error, resultInsert) {
-            if (error) {
-                console.error(error);
-                return res.status(500).send("Ocurrió un error al insertar el registro de compra");
-            }
-
-            res.json({
-                status: "ok",
-                compra_id: resultInsert.insertId
-            });
-        });
-    });
 
 router.post('/registrar/categoria', function(req, res, next){
     const {nombre}=req.body;
@@ -269,6 +210,90 @@ router.post('/registrar/talle', function(req, res, next) {
         });
     });
 
+    router.post('/registrar/envio', (req, res) => {
+        const { id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional } = req.body;
+    
+        if (!id_usuario || !codigo_postal || !calle || !numero || !ciudad) {
+            return res.status(400).json({ error: 'Todos los campos son requeridos, excepto la información adicional' });
+        }
+    
+        const sql_insert_envio = `
+            INSERT INTO envio (id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        
+        conexion.query(sql_insert_envio, [id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional], (error, result) => {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Error al crear el envío' });
+            }
+    
+            res.json({
+                status: "ok",
+                id_envio: result.insertId
+            });
+        });
+    });
+    
+    router.post('/registrar/producto_compra', function(req, res) {
+        const { id_producto, id_compra, cantidad, precio_unitario } = req.body;
+    
+        if (!id_producto || !id_compra || !cantidad || !precio_unitario) {
+            return res.status(400).json({ error: 'Todos los campos son requeridos' });
+        }
+    
+        const sql_insert_producto_compra = `
+            INSERT INTO producto_compra (id_producto, id_compra, cantidad, precio_unitario) 
+            VALUES (?, ?, ?, ?)
+        `;
+    
+        conexion.query(sql_insert_producto_compra, [id_producto, id_compra, cantidad, precio_unitario], function(error, result) {
+            if (error) {
+                console.error('Error al insertar el registro en producto_compra:', error.code, error.sqlMessage);
+                return res.status(500).send({ error: 'Error al insertar el registro de producto_compra: ' + error.sqlMessage });
+            }
+    
+            const sql_update_stock = `
+                UPDATE producto 
+                SET stock = stock - ? 
+                WHERE id = ?
+            `;
+    
+            conexion.query(sql_update_stock, [cantidad, id_producto], function(error, updateResult) {
+                if (error) {
+                    console.error('Error al actualizar el stock:', error.code, error.sqlMessage);
+                    return res.status(500).send({ error: 'Error al actualizar el stock del producto' });
+                }
+    
+                res.json({
+                    status: 'ok',
+                    id: result.insertId,
+                    mensaje: 'Producto agregado a la compra y stock actualizado correctamente'
+                });
+            });
+        });
+    });
+    
+    
+    router.post('/registrar/compra', function(req, res, next) {
+        const { id_metodo_pago, precio_total, id_envio } = req.body;
+    
+    
+            const sql_insert_compra = "INSERT INTO compra (id_metodo_pago, precio_total, id_envio) VALUES (?, ?, ?)";
+    
+            conexion.query(sql_insert_compra, [id_metodo_pago, precio_total, id_envio], function(error, resultInsert) {
+                if (error) {
+                    console.error(error);
+                    return res.status(500).send("Ocurrió un error al insertar el registro de compra");
+                }
+    
+                res.json({
+                    status: "ok",
+                    compra_id: resultInsert.insertId
+                });
+            });
+        });
+
     router.post('/registrar/tipo_producto', function(req, res, next) {
         const { nombre, id_categoria } = req.body;
         const nombreMinuscula = nombre.toLowerCase();
@@ -287,9 +312,6 @@ router.post('/registrar/talle', function(req, res, next) {
             });
         });
 
-
-
-//Editar
         router.put('/actualizar/producto/:id', upload.array('imagenes', 4), function(req, res) {
             const id = req.params.id; 
             const { nombre, precio, stock, id_tipo_producto, id_marca, id_talle } = req.body;
@@ -412,6 +434,7 @@ router.post('/registrar/talle', function(req, res, next) {
             });
         });
 
+
     router.put('actualizar/talle/:id', function(req, res, next) {
         const { id } = req.params;
         const { talle } = req.body;
@@ -516,10 +539,7 @@ router.post('/registrar/talle', function(req, res, next) {
         });
     });
 
-
-
-//Eliminar
-    router.delete('/borrar/producto/:id', function(req, res, next){
+    router.delete('/eliminar/producto/:id', function(req, res, next){
         const {id}=req.params;
         const sql="DELETE FROM producto WHERE id=?"
         conexion.query(sql,[id],function(error){
@@ -533,30 +553,8 @@ router.post('/registrar/talle', function(req, res, next) {
         });
     });
 
-    router.delete('/eliminar/envio/:id', function(req, res, next) {
-        const { id } = req.params;
-    
-        if (!id) {
-            return res.status(400).json({ error: 'El id del envío es requerido' });
-        }
-    
-        const sql = "DELETE FROM envio WHERE id = ?";
-    
-        conexion.query(sql, [id], function(error, result) {
-            if (error) {
-                console.error(error);
-                return res.status(500).send('Error al eliminar el envío');
-            }
-    
-            res.json({
-                status: "ok",
-                mensaje: "Envío eliminado correctamente",
-                affectedRows: result.affectedRows
-            });
-        });
-    });
 
-    router.delete('/borrar/talle/:id', function(req, res, next) {
+    router.delete('/eliminar/talle/:id', function(req, res, next) {
         const { id } = req.params;
         const sql = "DELETE FROM talle WHERE id=?";
     
@@ -567,43 +565,6 @@ router.post('/registrar/talle', function(req, res, next) {
             }
             res.json({
                 status: "ok"
-            });
-        });
-    });
-
-    router.delete('/eliminar/compra/:id', function(req, res, next) {
-        const { id } = req.query;
-        const sql = "DELETE FROM compra WHERE id = ?";
-    
-        conexion.query(sql, [id], function(error) {
-            if (error) {
-                console.error(error);
-                return res.status(500).send("Ocurrió un error");
-            }
-    
-            res.json({
-                status: "ok",
-                mensaje: "Compra eliminada correctamente"
-            });
-        });
-    });
-
-    router.delete('/eliminar/producto_compra/:id', function(req, res) {
-        const { id } = req.params;
-        const sql = `
-            DELETE FROM productos_compra 
-            WHERE id = ?
-        `;
-    
-        conexion.query(sql, [id], function(error) {
-            if (error) {
-                console.error(error);
-                return res.status(500).send('Error al eliminar la relación');
-            }
-    
-            res.json({
-                status: 'ok',
-                mensaje: 'Eliminado correctamente'
             });
         });
     });
@@ -654,7 +615,30 @@ router.post('/registrar/talle', function(req, res, next) {
                 });
             });
         });
+
+        router.delete('/eliminar/envio/:id', function(req, res, next) {
+            const { id } = req.params;
         
+            if (!id) {
+                return res.status(400).json({ error: 'El id del envío es requerido' });
+            }
+        
+            const sql = "DELETE FROM envio WHERE id = ?";
+        
+            conexion.query(sql, [id], function(error, result) {
+                if (error) {
+                    console.error(error);
+                    return res.status(500).send('Error al eliminar el envío');
+                }
+        
+                res.json({
+                    status: "ok",
+                    mensaje: "Envío eliminado correctamente",
+                    affectedRows: result.affectedRows
+                });
+            });
+        });
+
     router.delete('/eliminar/categoria/:id', function(req, res, next){
         const {id}=req.params;
         const sql="DELETE FROM categoria WHERE id=?"
@@ -669,19 +653,60 @@ router.post('/registrar/talle', function(req, res, next) {
                 });
             });
         });
-
-    router.delete('/usuario/:id', function(req, res, next){
-            const id=req.params.id;
-            const sql="DELETE FROM usuario WHERE id=?"
-            conexion.query(sql,[id],function(error){
-                if(error){
+    
+        router.delete('/eliminar/producto_compra/:id', function(req, res) {
+            const { id } = req.params;
+            
+            const sql_get_cantidad = `
+                SELECT cantidad, id_producto 
+                FROM producto_compra 
+                WHERE id = ?
+            `;
+            
+            conexion.query(sql_get_cantidad, [id], function(error, results) {
+                if (error) {
                     console.error(error);
-                    return res.status(500).send("ocurrió un error");
+                    return res.status(500).send('Error al obtener la cantidad del producto');
                 }
-                res.json({
-                    status:"ok"
+        
+                if (results.length === 0) {
+                    return res.status(404).send('Producto no encontrado en la compra');
+                }
+        
+                const cantidad = results[0].cantidad;
+                const idProducto = results[0].id_producto;
+        
+                const sql_delete = `
+                    DELETE FROM producto_compra 
+                    WHERE id = ?
+                `;
+                
+                conexion.query(sql_delete, [id], function(error) {
+                    if (error) {
+                        console.error(error);
+                        return res.status(500).send('Error al eliminar la relación');
+                    }
+        
+                    const sql_actualizar_stock = `
+                        UPDATE producto 
+                        SET stock = stock + ? 
+                        WHERE id = ?
+                    `;
+                    
+                    conexion.query(sql_actualizar_stock, [cantidad, idProducto], function(error) {
+                        if (error) {
+                            console.error(error);
+                            return res.status(500).send('Error al actualizar el stock');
+                        }
+        
+                        res.json({
+                            status: 'ok',
+                            mensaje: 'Eliminado correctamente y stock actualizado'
+                        });
+                    });
                 });
             });
         });
+
 
 module.exports=router;
