@@ -2,160 +2,74 @@ const router = require('express').Router();
 const { conexion } = require('../db/conexion');
 const rutasPublic=require('./rutasPublic');
 const rutasUsuario=require('./rutasUsuario')
+const upload = require('../config/uploadConfig');
 
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-
-function actualizarImagenes(idProducto, imagenes, res) {
-    const sqlEliminarImagenes = `DELETE FROM producto_imagenes WHERE id_producto = ?`;
-    conexion.query(sqlEliminarImagenes, [idProducto], function(error) {
-        if (error) {
-            console.error(error);
-            return res.status(500).json({ error: 'Error al eliminar las imágenes anteriores' });
-        }
-        const sqlInsertarImagen = `INSERT INTO producto_imagenes (id_producto, ruta) VALUES ?`;
-        const valoresImagenes = imagenes.map((imagen) => [idProducto, imagen.path]);
-
-        conexion.query(sqlInsertarImagen, [valoresImagenes], function(error) {
-            if (error) {
-                console.error(error);
-                return res.status(500).json({ error: 'Error al insertar las nuevas imágenes' });
-            }
-
-            res.json({
-                status: 'ok',
-                mensaje: 'Producto y sus imágenes actualizados correctamente',
-                producto_id: idProducto
-            });
-        });
-    });
-}
-
-const tempUploadsPath = path.join(__dirname, '/temp_uploads');
-const uploadsPath = path.join(__dirname, '/uploads');
-
-if (!fs.existsSync(tempUploadsPath)) {
-    fs.mkdirSync(tempUploadsPath, { recursive: true });
-}
-if (!fs.existsSync(uploadsPath)) {
-    fs.mkdirSync(uploadsPath, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, tempUploadsPath);
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
-
-function limpiarArchivosTemporales(files) {
-    files.forEach(file => {
-        if (fs.existsSync(file.path)) {
-            fs.unlink(file.path, (error) => {
-                if (error) console.error(`Error al eliminar el archivo temporal ${file.path}:`, error);
-            });
-        } else {
-            console.log(`El archivo temporal ${file.path} ya no existe.`);
-        }
-    });
-}
-
-function saveImage(file, nombreProducto, callback) {
-    const timestamp = Date.now();
-    const extension = path.extname(file.originalname);
-    const newFileName = `${nombreProducto}-${timestamp}${extension}`;
-    const newPath = path.join(uploadsPath, newFileName);
-    fs.rename(file.path, newPath, (error) => {
-        if (error) {
-            return callback(error);
-        }
-        callback(null, newPath);
-    });
-}
-
 router.use(rutasPublic);
 router.use(rutasUsuario);
 
-router.post('/registrar/producto', upload.array('imagenes', 4), function (req, res) {
-    const { nombre, precio, stock, id_tipo_producto, id_marca, id_talle } = req.body;
-    const nombreMin = nombre.toLowerCase();
 
-    if (!req.files || req.files.length === 0) {
-        return res.status(400).send({ error: 'Debe incluir al menos una imagen para el producto' });
+router.post('/registrar/producto', upload.single('imagen'), function (req, res) {
+    const { nombre, precio, stock, id_tipo_producto, id_marca, id_talle } = req.body;
+    const imagen = req.file;
+
+    if (!imagen) {
+        return res.status(400).send({ error: 'Debe incluir una imagen para el producto' });
     }
 
-    const sql_insert_producto = 
-        "INSERT INTO producto (nombre, precio, stock, id_tipo_producto, id_marca, id_talle) VALUES (?, ?, ?, ?, ?, ?)";
+    const rutaImagen = path.join('uploads', imagen.filename).replace(/\\/g, '/'); // Asegúrate de usar barras normales para la ruta
     
-    conexion.query(sql_insert_producto, [nombreMin, precio, stock, id_tipo_producto, id_marca, id_talle], function(error, resultProducto) {
+    const sql_insert_producto = 
+        "INSERT INTO producto (nombre, precio, stock, id_tipo_producto, id_marca, id_talle, ruta_imagen) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    
+    conexion.query(sql_insert_producto, [nombre.toLowerCase(), precio, stock, id_tipo_producto, id_marca, id_talle, rutaImagen], function(error, resultProducto) {
         if (error) {
             console.error('Error al insertar producto:', error);
-            limpiarArchivosTemporales(req.files);
+            fs.unlink(rutaImagen, (err) => {
+                if (err) {
+                    console.error('Error al eliminar imagen:', err);
+                }
+            });
             return res.status(500).send({ error: 'Error al registrar el producto' });
         }
 
         const producto_id = resultProducto.insertId;
-        const valoresImagenes = [];
         
-        req.files.forEach(file => {
-            saveImage(file, nombreMin, function(err, rutaImagen) {
-                if (err) {
-                    conexion.query("DELETE FROM producto WHERE id = ?", [producto_id], function() {
-                        limpiarArchivosTemporales(req.files);
-                        return res.status(500).send({ error: 'Error al mover las imágenes' });
-                    });
-                    return;
-                }
-                valoresImagenes.push([producto_id, rutaImagen]);
-                if (valoresImagenes.length === req.files.length) {
-                    const sql_insert_imagenes = "INSERT INTO producto_imagen (id_producto, ruta_imagen) VALUES ?";
-                    conexion.query(sql_insert_imagenes, [valoresImagenes], function(error) {
-                        if (error) {
-                            console.error('Error al insertar imágenes:', error);
-                            valoresImagenes.forEach(([_, rutaImagen]) => fs.unlinkSync(rutaImagen));
-                            conexion.query("DELETE FROM producto WHERE id = ?", [producto_id], function() {
-                                limpiarArchivosTemporales(req.files);
-                                return res.status(500).send({ error: 'Error al guardar las imágenes' });
-                            });
-                            return;
-                        }
-
-                        limpiarArchivosTemporales(req.files);
-
-                        res.json({
-                            status: "ok",
-                            mensaje: "Producto insertado correctamente con imágenes",
-                            producto_id: producto_id
-                        });
-                    });
-                }
-            });
-        });
-    });
-});
-
-router.post('/registrar/categoria', function(req, res, next){
-    const {nombre}=req.body;
-
-    const nombreMinuscula = nombre.toLowerCase();
-    const sql="INSERT INTO categoria (nombre) VALUES (?)"
-
-    conexion.query(sql, [nombreMinuscula], function(error,result){
-        if(error){
-            console.error(error);
-            return res.status(500).send(error);
-        }
         res.json({
-            status:"ok",
-            id:result.insertId
+            status: "ok",
+            mensaje: "Producto insertado correctamente con imagen",
+            producto_id: producto_id
         });
     });
 });
+
+
+
+
+router.post('/registrar/talle', function(req, res, next) {
+    const { talle, id_tipo_producto } = req.body;
+    const talleMin = talle.toLowerCase();
+
+        if (results.length > 0) {
+            return res.json({
+                status: "ok",
+                id: results[0].id
+            });
+        } else {
+            const sql_insert_talle = "INSERT INTO talle (talle, id_tipo_producto) VALUES (?, ?)";
+            conexion.query(sql_insert_talle, [talleMin, id_tipo_producto], function(error, result) {
+                if (error) {
+                    console.error(error);
+                    return res.status(500).send("Error en la inserción de datos.");
+                }
+                res.json({
+                    status: "ok",
+                    id: result.insertId
+                });
+            });
+        }
+    });
 
 router.post('/registrar/metodo_pago', function(req, res, next) {
     const { tipo_pago } = req.body;

@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const { conexion } = require('../db/conexion');
-
-const rutasPublic=require('./rutasPublic')
+const rutasPublic = require('./rutasPublic');
 
 router.use(rutasPublic);
 
@@ -38,11 +37,11 @@ router.get('/ver/producto_compra/:id?', function(req, res) {
     });
 });
 
-router.get('/ver/perfil/:id', function (req, res) {
+router.get('/ver/perfil/:id', function(req, res) {
     const id = req.params.id;
-    const sql = "SELECT nombre_completo,mail, fecha_nac, nombre_usuario,telefono FROM usuario WHERE id = ?";
+    const sql = "SELECT nombre_completo, mail, fecha_nac, nombre_usuario, telefono FROM usuario WHERE id = ?";
     
-    conexion.query(sql, [id], function (error, result) {
+    conexion.query(sql, [id], function(error, result) {
         if (error) {
             console.error(error);
             return res.status(500).json({ error: 'Error en la consulta' });
@@ -58,7 +57,6 @@ router.get('/ver/perfil/:id', function (req, res) {
         });
     });
 });
-
 
 router.get('/ver/envio/:id?', function(req, res) {
     const id = req.params.id;
@@ -93,4 +91,49 @@ router.get('/ver/compra/:id?', function(req, res, next) {
         });
     });
 });
-module.exports=router;
+
+// Ruta para agregar productos al carrito
+router.post('/carrito', function(req, res, next) {
+    const { usuario_id, producto_id, cantidad } = req.body;
+    const sql = "INSERT INTO carrito (id_usuario, id_producto, cantidad) VALUES (?, ?, ?)";
+
+    conexion.query(sql, [usuario_id, producto_id, cantidad], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).send(error);
+        }
+        res.json({
+            status: "ok",
+            carrito: result.insertId
+        });
+    });
+});
+
+// Ruta para finalizar la compra
+router.post('/ventas', function(req, res, next) {
+    const { productos, idUsuario, fecha } = req.body;
+    let sql = "INSERT INTO compra (id_usuario, fecha) VALUES (?, ?)";
+    
+    conexion.query(sql, [idUsuario, fecha], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).send(error);
+        }
+        const idCompra = result.insertId;
+        sql = "INSERT INTO producto_compra (id_compra, id_producto, cantidad, precio_unitario) VALUES ?";
+        const valores = productos.map(prod => [idCompra, prod.id, prod.unidades, prod.precio_unitario]);
+
+        conexion.query(sql, [valores], function(error) {
+            if (error) {
+                console.error(error);
+                return res.status(500).send(error);
+            }
+            res.json({
+                status: "ok",
+                compra: idCompra
+            });
+        });
+    });
+});
+
+module.exports = router;

@@ -12,8 +12,11 @@ app.get('/',function(req,res,next){
 
 
 })
-const uploadsPath = path.join(__dirname, 'api/uploads');
-app.use('/uploads', express.static(uploadsPath));
+const uploadsPath = path.join(__dirname, 'uploads');
+ app.use('/uploads', express.static(uploadsPath));
+
+ 
+
 app.use(cors({
   origin: 'http://localhost:5173', // Dirección del frontend
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
