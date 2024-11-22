@@ -1,145 +1,178 @@
 const router = require('express').Router();
-const rutasPublic = require('./rutasPublic');
 const { conexion } = require('../db/conexion');
-const hashpass = require('@damianegreco/hashpass');
-
-// Función para verificar la autenticación del usuario
-const verificarAutenticacion = (req, res, next) => {
-  const token = req.headers['Authorization'];
-
-  if (!token) {
-    return res.status(403).json({ message: 'Token no proporcionado' });
-  }
-
-  // Asumiendo que el token contiene el ID del usuario y la contraseña encriptada
-  const [usuario_id, hash] = token.split('.');
-
-  // Consultar la base de datos para obtener la contraseña del usuario
-  const sql = 'SELECT contraseña FROM usuario WHERE id = ?';
-  conexion.query(sql, [usuario_id], (error, results) => {
-    if (error) {
-      console.error(error);
-      return res.status(500).send(error);
-    }
-
-    if (results.length === 0) {
-      return res.status(401).json({ message: 'Usuario no encontrado' });
-    }
-
-    const contraseña = results[0].contraseña;
-
-    // Verificar la contraseña
-    hashpass.verify(contraseña, hash).then(match => {
-      if (!match) {
-        return res.status(401).json({ message: 'Token inválido' });
-      }
-
-      req.usuario_id = usuario_id;
-      next();
-    }).catch(error => {
-      console.error(error);
-      res.status(500).send(error);
-    });
-  });
-};
+const rutasPublic = require('./rutasPublic');
 
 router.use(rutasPublic);
 
-router.get('/ver/metodos_pago/:id?', function(req, res) {
-  const { id } = req.params;
-  const sql = id ? "SELECT * FROM metodo_pago WHERE id=?" : "SELECT * FROM metodo_pago";
-  conexion.query(sql, id ? [id] : [], function(error, result) {
-    if (error) {
-      console.error(error);
-      return res.status(500).send(error);
-    }
-    res.json({ status: "ok", metodo_pago: result });
-  });
-});
+router.get('/ver/metodos_pago/:id?', function(req, res, next) {
+    const { id } = req.params;
+    const sql = id ? "SELECT * FROM metodo_pago WHERE id=?" : "SELECT * FROM metodo_pago";
 
-router.get('/ver/producto_compra/:id?', function(req, res) {
-  const { id } = req.params;
-  const sql = id ? "SELECT * FROM producto_compra WHERE id=?" : "SELECT * FROM producto_compra";
-  conexion.query(sql, id ? [id] : [], function(error, result) {
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'Error en la consulta' });
-    }
-    res.json({ status: "ok", producto_compra: result });
-  });
-});
-
-router.get('/ver/envio/:id?', function(req, res) {
-  const id = req.params.id;
-  const sql = id ? "SELECT * FROM envio WHERE id=?" : "SELECT * FROM envio";
-  conexion.query(sql, id ? [id] : [], function(error, result) {
-    if (error) {
-      console.error(error);
-      return res.status(500).send(error);
-    }
-    res.json({ status: "ok", envio: result.length > 0 ? result[0] : null });
-  });
-});
-
-router.get('/ver/compra/:id?', function(req, res) {
-  const id = req.params.id;
-  const sql = id ? "SELECT * FROM compra WHERE id=?" : "SELECT * FROM compra";
-  conexion.query(sql, id ? [id] : [], function(error, result) {
-    if (error) {
-      console.error(error);
-      return res.status(500).send(error);
-    }
-    res.json({ status: "ok", compra: result });
-  });
-});
-
-router.post('/agregar/carrito', (req, res) => {
-    const { usuario_id, productos } = req.body;
-
-    if (!usuario_id || !Array.isArray(productos) || productos.length === 0) {
-        return res.status(400).json({ error: 'Se requiere un usuario y una lista de productos válida.' });
-    }
-
-    const values = productos.map(producto => [usuario_id, producto.producto_id, producto.cantidad]);
-
-    const sql = 'INSERT INTO carrito (usuario_id, producto_id, cantidad) VALUES ?';
-
-    conexion.query(sql, [values], (error, result) => {
+    conexion.query(sql, id ? [id] : [], function(error, result) {
         if (error) {
-            console.error('Error al agregar productos al carrito:', error);
-            return res.status(500).json({ error: 'Ocurrió un error al agregar productos al carrito.' });
+            console.error(error);
+            return res.status(500).send(error);
         }
-
         res.json({
-            status: 'ok',
-            mensaje: 'Productos agregados al carrito correctamente.',
-            insertados: result.affectedRows
+            status: "ok",
+            metodo_pago: result
         });
     });
 });
 
-router.get('/ver/carrito/:id', (req, res) => {
-  const  id  = req.params.id;
-  const sql = 'SELECT * FROM carrito WHERE id = ?';
-  conexion.query(sql, [id], (error, results) => {
-    if (error) {
-      console.error(error);
-      return res.status(500).send(error);
-    }
-    res.json({ status: "ok", carrito: results });
-  });
+router.get('/ver/producto_compra/:id?', function(req, res) {
+    const { id } = req.params;
+    const sql = id ? "SELECT * FROM producto_compra WHERE id=?" : "SELECT * FROM producto_compra";
+
+    conexion.query(sql, id ? [id] : [], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'Error en la consulta' });
+        }
+
+        res.json({
+            status: "ok",
+            producto_compra: result
+        });
+    });
 });
 
-router.delete('/eliminar/carrito/:id', (req, res) => {
-  const { id } = req.params;
-  const sql = 'DELETE FROM carrito WHERE id = ?';
-  conexion.query(sql, [id], (error, result) => {
-    if (error) {
-      console.error(error);
-      return res.status(500).send(error);
-    }
-    res.json({ status: "ok", result });
-  });
+router.get('/ver/perfil/:id', function(req, res) {
+    const id = req.params.id;
+    const sql = "SELECT nombre_completo, mail, fecha_nac, nombre_usuario, telefono FROM usuario WHERE id = ?";
+    
+    conexion.query(sql, [id], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'Error en la consulta' });
+        }
+        
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        
+        res.json({
+            status: 'ok',
+            usuario: result[0]
+        });
+    });
 });
+
+router.get('/ver/envio/:id?', function(req, res) {
+    const id = req.params.id;
+    const sql = id ? "SELECT * FROM envio WHERE id=?" : "SELECT * FROM envio";
+
+    conexion.query(sql, id ? [id] : [], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).send(error);
+        }
+
+        res.json({
+            status: "ok",
+            envio: result.length > 0 ? result[0] : null
+        });
+    });
+});
+
+router.get('/ver/compra/:id?', function(req, res, next) {
+    const id = req.params.id;
+    const sql = id ? "SELECT * FROM compra WHERE id=?" : "SELECT * FROM compra";
+
+    conexion.query(sql, id ? [id] : [], function(error, result) {
+        if (error) {
+            console.error(error);
+            return res.status(500).send(error);
+        }
+
+        res.json({
+            status: "ok",
+            compra: result
+        });
+    });
+});
+
+router.post('/registrar/envio', (req, res) => {
+    const { id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional } = req.body;
+
+    if (!id_usuario || !codigo_postal || !calle || !numero || !ciudad) {
+        return res.status(400).json({ error: 'Todos los campos son requeridos, excepto la información adicional' });
+    }
+
+    const sql_insert_envio = `
+        INSERT INTO envio (id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    
+    conexion.query(sql_insert_envio, [id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional], (error, result) => {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'Error al crear el envío' });
+        }
+
+        res.json({
+            status: "ok",
+            id_envio: result.insertId
+        });
+    });
+});
+
+router.post('/registrar/producto_compra', function(req, res) {
+    const { id_producto, id_compra, cantidad, precio_unitario } = req.body;
+
+    if (!id_producto || !id_compra || !cantidad || !precio_unitario) {
+        return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+
+    const sql_insert_producto_compra = `
+        INSERT INTO producto_compra (id_producto, id_compra, cantidad, precio_unitario) 
+        VALUES (?, ?, ?, ?)
+    `;
+
+    conexion.query(sql_insert_producto_compra, [id_producto, id_compra, cantidad, precio_unitario], function(error, result) {
+        if (error) {
+            console.error('Error al insertar el registro en producto_compra:', error.code, error.sqlMessage);
+            return res.status(500).send({ error: 'Error al insertar el registro de producto_compra: ' + error.sqlMessage });
+        }
+
+        const sql_update_stock = `
+            UPDATE producto 
+            SET stock = stock - ? 
+            WHERE id = ?
+        `;
+
+        conexion.query(sql_update_stock, [cantidad, id_producto], function(error, updateResult) {
+            if (error) {
+                console.error('Error al actualizar el stock:', error.code, error.sqlMessage);
+                return res.status(500).send({ error: 'Error al actualizar el stock del producto' });
+            }
+
+            res.json({
+                status: 'ok',
+                id: result.insertId,
+                mensaje: 'Producto agregado a la compra y stock actualizado correctamente'
+            });
+        });
+    });
+});
+
+router.post('/registrar/compra', function(req, res, next) {
+    const {precio_total, id_envio } = req.body;
+
+
+        const sql_insert_compra = "INSERT INTO compra (precio_total, id_envio) VALUES ( ?, ?)";
+
+        conexion.query(sql_insert_compra, [precio_total, id_envio], function(error, resultInsert) {
+            if (error) {
+                console.error(error);
+                return res.status(500).send("Ocurrió un error al insertar el registro de compra");
+            }
+
+            res.json({
+                status: "ok",
+                compra_id: resultInsert.insertId
+            });
+        });
+    });
 
 module.exports = router;

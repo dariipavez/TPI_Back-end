@@ -1,6 +1,5 @@
 const mysql=require('mysql');
 const conexion=mysql.createConnection({
-
     host:'ctpoba.edu.ar',
     user:'poum',
     password:'47355966',
