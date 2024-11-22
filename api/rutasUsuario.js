@@ -92,23 +92,6 @@ router.get('/ver/compra/:id?', function(req, res, next) {
     });
 });
 
-// Ruta para agregar productos al carrito
-router.post('/carrito', function(req, res, next) {
-    const { usuario_id, producto_id, cantidad } = req.body;
-    const sql = "INSERT INTO carrito (id_usuario, id_producto, cantidad) VALUES (?, ?, ?)";
-
-    conexion.query(sql, [usuario_id, producto_id, cantidad], function(error, result) {
-        if (error) {
-            console.error(error);
-            return res.status(500).send(error);
-        }
-        res.json({
-            status: "ok",
-            carrito: result.insertId
-        });
-    });
-});
-
 // Ruta para finalizar la compra
 router.post('/ventas', function(req, res, next) {
     const { productos, idUsuario, fecha } = req.body;

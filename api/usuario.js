@@ -126,7 +126,6 @@ router.post('/verificar/datos', (req, res) => {
   });
   
 
-
   router.put('/actualizar/:id', function(req, res) {
     const id = req.params.id;
     const { nombre_usuario, contraseña, nombre_completo, fecha_nac, mail, rol, telefono, nueva_contraseña } = req.body;
@@ -134,6 +133,11 @@ router.post('/verificar/datos', (req, res) => {
     if (!id) {
         return res.status(400).json({ error: 'Se necesita el id del usuario' });
     }
+
+
+    const token = req.headers.authorization;
+    const verificacion = verificarToken(token, TOKEN_SECRET);
+    // Verificar si se está actualizando la contraseña
 
     if (nueva_contraseña) {
         const nuevaContraseñaHashed = hashPass(nueva_contraseña);
@@ -205,9 +209,10 @@ router.post('/verificar/datos', (req, res) => {
             }
 
             res.json({ status: 'ok', mensaje: 'Usuario actualizado correctamente' });
-        });
-    }
+        });
+    }
 });
+
 
 
 

@@ -9,6 +9,22 @@ const fs = require('fs');
 router.use(rutasPublic);
 router.use(rutasUsuario);
 
+router.get('/ver/usuario', function (req, res) {
+    const sql = "SELECT id, nombre_completo, mail, fecha_nac, nombre_usuario, telefono FROM usuario";
+    
+    conexion.query(sql, function (error, results) {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ error: 'Error en la consulta' });
+        }
+        
+        res.json({
+            status: 'ok',
+            usuarios: results
+        });
+    });
+        });
+
 
 router.post('/registrar/producto', upload.single('imagen'), function (req, res) {
     const { nombre, precio, stock, id_tipo_producto, id_marca, id_talle } = req.body;
@@ -43,8 +59,6 @@ router.post('/registrar/producto', upload.single('imagen'), function (req, res) 
         });
     });
 });
-
-
 
 
 router.post('/registrar/talle', function(req, res, next) {
