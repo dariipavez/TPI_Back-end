@@ -498,4 +498,32 @@ router.delete('/eliminar/talle/:id', function(req, res, next) {
                 });
             });
         });
+        router.put('/actualizar/stock/:id_talle', function(req, res) {
+            const { id_talle } = req.params;
+            const { stock } = req.body;
+          
+            if (typeof stock !== 'number' || stock < 0) {
+              return res.status(400).json({ error: 'El stock debe ser un número válido y no negativo.' });
+            }
+          
+            const sql_update_stock = 'UPDATE producto_talle SET stock = ? WHERE id_talle = ?';
+          
+            conexion.query(sql_update_stock, [stock, id_talle], function(error, results) {
+              if (error) {
+                console.error('Error al actualizar el stock:', error);
+                return res.status(500).send({ error: 'Error al actualizar el stock del producto' });
+              }
+          
+              if (results.affectedRows === 0) {
+                return res.status(404).send({ error: 'Talle no encontrado' });
+              }
+          
+              res.json({
+                status: 'ok',
+                mensaje: 'Stock actualizado correctamente'
+              });
+            });
+          });
+          
+
 module.exports=router;
