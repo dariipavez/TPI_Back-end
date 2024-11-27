@@ -4,22 +4,6 @@ const rutasPublic = require('./rutasPublic');
 
 router.use(rutasPublic);
 
-router.get('/ver/metodos_pago/:id?', function(req, res, next) {
-    const { id } = req.params;
-    const sql = id ? "SELECT * FROM metodo_pago WHERE id=?" : "SELECT * FROM metodo_pago";
-
-    conexion.query(sql, id ? [id] : [], function(error, result) {
-        if (error) {
-            console.error(error);
-            return res.status(500).send(error);
-        }
-        res.json({
-            status: "ok",
-            metodo_pago: result
-        });
-    });
-});
-
 router.get('/ver/producto_compra/:id?', function(req, res) {
     const { id } = req.params;
     const sql = id ? "SELECT * FROM producto_compra WHERE id=?" : "SELECT * FROM producto_compra";
@@ -91,32 +75,71 @@ router.get('/ver/compra/:id?', function(req, res, next) {
         });
     });
 });
-
-// Ruta para finalizar la compra
-router.post('/ventas', function(req, res, next) {
-    const { productos, idUsuario, fecha } = req.body;
-    let sql = "INSERT INTO compra (id_usuario, fecha) VALUES (?, ?)";
-    
-    conexion.query(sql, [idUsuario, fecha], function(error, result) {
-        if (error) {
-            console.error(error);
-            return res.status(500).send(error);
-        }
-        const idCompra = result.insertId;
-        sql = "INSERT INTO producto_compra (id_compra, id_producto, cantidad, precio_unitario) VALUES ?";
-        const valores = productos.map(prod => [idCompra, prod.id, prod.unidades, prod.precio_unitario]);
-
-        conexion.query(sql, [valores], function(error) {
-            if (error) {
-                console.error(error);
-                return res.status(500).send(error);
-            }
-            res.json({
-                status: "ok",
-                compra: idCompra
-            });
-        });
+router.post('/registrar/envio', (req, res) => {
+    const { id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional } = req.body;
+  
+    if (!id_usuario || !codigo_postal || !calle || !numero || !ciudad) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos, excepto la información adicional' });
+    }
+  
+    const sql_insert_envio = `
+      INSERT INTO envio (id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional) 
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+  
+    conexion.query(sql_insert_envio, [id_usuario, codigo_postal, calle, numero, ciudad, informacion_adicional], (error, result) => {
+      if (error) {
+        console.error('Error al crear el envío:', error);
+        return res.status(500).json({ error: 'Error al crear el envío: ' + error.sqlMessage });
+      }
+  
+      const id_envio = result.insertId;
+      res.json({ status: "ok", id_envio });
     });
-});
+  });
+  
+  router.post('/registrar/compra', (req, res) => {
+    const { precio_total, id_envio, carrito } = req.body;
+  
+    if (precio_total == null || id_envio == null || !Array.isArray(carrito) || carrito.length === 0) {
+      return res.status(400).json({ error: 'El precio total, el id_envio, y el carrito son requeridos.' });
+    }
+  
+    const sql_insert_compra = "INSERT INTO compra (precio_total, id_envio) VALUES (?, ?)";
+    conexion.query(sql_insert_compra, [precio_total, id_envio], (error, resultInsert) => {
+      if (error) {
+        console.error('Error al insertar el registro de compra:', error);
+        return res.status(500).send({ error: 'Ocurrió un error al insertar el registro de compra' });
+      }
+  
+      const compra_id = resultInsert.insertId;
+  
+      carrito.forEach((producto, index) => {
+        const { id_producto, cantidad, precio_unitario, id_talle } = producto;
+        if (!id_producto || !precio_unitario) {
+          return res.status(400).send({ error: 'El id_producto y el precio_unitario son requeridos.' });
+        }
+  
+        const sql_insert_producto_compra = "INSERT INTO producto_compra (id_producto, id_compra, cantidad, precio_unitario) VALUES (?, ?, ?, ?)";
+        conexion.query(sql_insert_producto_compra, [id_producto, compra_id, cantidad, precio_unitario], (error, result) => {
+          if (error) {
+            console.error('Error al insertar producto_compra:', error.sqlMessage);
+            return res.status(500).send({ error: 'Error al insertar producto_compra: ' + error.sqlMessage });
+          }
+  
+          const sql_update_stock = "UPDATE producto_talle SET stock = stock - ? WHERE id_producto = ? AND id_talle = ?";
+          conexion.query(sql_update_stock, [cantidad, id_producto, id_talle], (error, result) => {
+            if (error) {
+              console.error('Error al actualizar el stock:', error.sqlMessage);
+              return res.status(500).send({ error: 'Error al actualizar el stock: ' + error.sqlMessage });
+            }
+            if (index === carrito.length - 1) {
+              res.json({ status: "ok", compra_id });
+            }
+          });
+        });
+      });
+    });
+  });
 
 module.exports = router;

@@ -45,27 +45,31 @@ const guardarUsuario=function(nombre_usuario,contraseñaHash, nombre_completo, f
     })
 }
 
-router.post('/registrarse',function(req,res,next){
-    const {nombre_usuario,contraseña,nombre_completo, fecha_nac, mail, telefono}=req.body;
+router.post('/registrarse', function(req, res, next) {
+    const { nombre_usuario, contraseña, nombre_completo, fecha_nacimiento, correo, telefono } = req.body;
 
-    const rol='usuario'
+    const rol = 'usuario';
+
+    if (!fecha_nacimiento) {
+        return res.status(400).json({ status: 'error', error: 'La fecha de nacimiento es requerida' });
+    }
 
     checkUser(nombre_usuario)
-    .then(()=>{
-        const contraseñaHasheada=hashPass(contraseña);
-        guardarUsuario(nombre_usuario, contraseñaHasheada, nombre_completo, fecha_nac, mail, rol, telefono)
+    .then(() => {
+        const contraseñaHasheada = hashPass(contraseña);
+        guardarUsuario(nombre_usuario, contraseñaHasheada, nombre_completo, fecha_nacimiento, correo, rol, telefono)
         .then((usuario_id) => {
             res.json({
-                status:"ok",
+                status: "ok",
                 usuario_id
-            })
+            });
         })
     })
     .catch(error => {
         console.error("Error al registrar usuario:", error);
         res.status(500).json({ status: 'error', error: error.toString() });
     });
-})
+});
 
     
 router.post("/login",function(req,res,next){
