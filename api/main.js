@@ -14,7 +14,7 @@ function rutasUsuario(req) { const rutasPermitidas = [
 '/rutasUsuario/registrar/producto_compra',
 '/rutasUsuario/registrar/compra'
 ]
-const rutaBase = req.path.split('?')[0].split('/')[1];
+const rutaBase = req.path.split('/')[1];
 return rutasPermitidas.some(ruta => ruta.includes(rutaBase));
 }
 

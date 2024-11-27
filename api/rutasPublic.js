@@ -203,7 +203,7 @@ router.get('/ver/talle/tipo_producto/:id_tipo_producto', function(req, res) {
         const tipoProducto = result[0]?.nombre.toLowerCase();
         
         if (tipoProducto === 'buzo' || tipoProducto === 'remera') {
-            orderClause = "ORDER BY FIELD(talle, 'S', 'M', 'L', 'XL', 'XXL')";
+            orderClause = "ORDER BY FIELD(talle, 's', 'm', 'l', 'xl', 'xxl')";
         } else if (tipoProducto === 'pantalon') {
             orderClause = "ORDER BY CAST(SUBSTRING_INDEX(talle, ' ', -1) AS UNSIGNED)";
         } else if (tipoProducto === 'zapatillas') {
